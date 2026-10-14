@@ -176,7 +176,7 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 | --- | --- | --- | --- |
 | 0 | 10-13 | 容器骨架落地 | 头部解析、VariantDictionary、测试全绿（已完成） |
 | 1 | 10-14 到 10-16 | 密钥层 | 复合主密钥、AES-KDF、头部 SHA-256 与 HMAC 校验，含向量测试（SHA-256 与 HMAC-SHA-256 已完成） |
-| 2 | 10-17 到 10-19 | 解密路径 | AES-256-CBC、HMAC 块流、inner header、gzip 解压 |
+| 2 | 10-17 到 10-19 | 解密路径 | AES-256-CBC、HMAC 块流、inner header、gzip 解压（CBC 与块流已完成，gzip 待做） |
 | 3 | 10-20 到 10-23 | 数据模型与 CLI | XML 转分组与条目模型，`info`、`ls`、`show` |
 | 4 | 10-24 到 10-27 | 互操作与审计 | 真实 `.kdbx` 互操作测试，`audit` 报告（Markdown 与 JSON） |
 | 5 | 10-28 到 10-31 | 收尾与提交 | 文档、演示、边界用例、提交材料（README、测试、许可证） |

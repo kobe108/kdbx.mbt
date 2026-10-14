@@ -39,6 +39,95 @@ pub fn HeaderVerification::kdf_rounds(self : HeaderVerification) -> UInt64 {
 }
 
 ///|
+/// Everything the caller needs in order to keep reading a database: the facts
+/// established about the header, plus the keys derived from the credentials.
+pub struct OpenedHeader {
+  verification : HeaderVerification
+  iv : Bytes
+  header_length : Int
+  encryption_key : Bytes
+  hmac_key_base : Bytes
+}
+
+///|
+pub fn OpenedHeader::verification(self : OpenedHeader) -> HeaderVerification {
+  self.verification
+}
+
+///|
+pub fn OpenedHeader::cipher(self : OpenedHeader) -> Cipher {
+  self.verification.cipher()
+}
+
+///|
+pub fn OpenedHeader::compression(self : OpenedHeader) -> Compression {
+  self.verification.compression()
+}
+
+///|
+pub fn OpenedHeader::iv(self : OpenedHeader) -> Bytes {
+  self.iv
+}
+
+///|
+pub fn OpenedHeader::header_length(self : OpenedHeader) -> Int {
+  self.header_length
+}
+
+///|
+pub fn OpenedHeader::encryption_key(self : OpenedHeader) -> Bytes {
+  self.encryption_key
+}
+
+///|
+/// Key material for the HMAC-protected block stream.
+pub fn OpenedHeader::hmac_key_base(self : OpenedHeader) -> Bytes {
+  self.hmac_key_base
+}
+
+///|
+/// Verifies the header and derives every key the payload needs.
+///
+/// Fails for a wrong password and for a modified header in the same way, on
+/// purpose: telling those apart would tell an attacker which half of a guess was
+/// right.
+pub fn open_header(
+  data : Bytes,
+  key : MasterKey,
+) -> OpenedHeader raise KdbxError {
+  let header = parse_outer_header(data)
+  let header_bytes = read_range(data, 0, header.byte_length())
+  let stored_hash = read_range(data, header.byte_length(), 32)
+  if !constant_time_equal(sha256(header_bytes), stored_hash) {
+    raise Malformed("header hash mismatch: the file is corrupted")
+  }
+  let kdf = aes_kdf_from_parameters(header.kdf_parameters())
+  let transformed = kdf.transform(key.composite())
+  let master_seed = header.master_seed()
+  let base = derive_hmac_key_base(master_seed, transformed)
+  let header_key = derive_header_hmac_key(base)
+  let stored_hmac = read_range(data, header.byte_length() + 32, 32)
+  if !constant_time_equal(hmac_sha256(header_key, header_bytes), stored_hmac) {
+    raise Malformed(
+      "header authentication failed: wrong master key or modified header",
+    )
+  }
+  let cipher = header.cipher()
+  {
+    verification: {
+      revision: header.revision(),
+      cipher,
+      compression: header.compression(),
+      kdf_rounds: kdf.rounds(),
+    },
+    iv: header.encryption_iv(),
+    header_length: header.byte_length(),
+    encryption_key: derive_encryption_key(master_seed, transformed),
+    hmac_key_base: base,
+  }
+}
+
+///|
 /// Verifies that the header of `data` is intact and authentic.
 ///
 /// On success the caller knows the header was produced by someone holding the
@@ -49,29 +138,7 @@ pub fn verify_header(
   data : Bytes,
   key : MasterKey,
 ) -> HeaderVerification raise KdbxError {
-  let header = parse_outer_header(data)
-  let header_bytes = read_range(data, 0, header.byte_length())
-  let stored_hash = read_range(data, header.byte_length(), 32)
-  if !constant_time_equal(sha256(header_bytes), stored_hash) {
-    raise Malformed("header hash mismatch: the file is corrupted")
-  }
-  let kdf = aes_kdf_from_parameters(header.kdf_parameters())
-  let transformed = kdf.transform(key.composite())
-  let base = derive_hmac_key_base(header.master_seed(), transformed)
-  let header_key = derive_header_hmac_key(base)
-  let stored_hmac = read_range(data, header.byte_length() + 32, 32)
-  let expected = hmac_sha256(header_key, header_bytes)
-  if !constant_time_equal(expected, stored_hmac) {
-    raise Malformed(
-      "header authentication failed: wrong master key or modified header",
-    )
-  }
-  {
-    revision: header.revision(),
-    cipher: header.cipher(),
-    compression: header.compression(),
-    kdf_rounds: kdf.rounds(),
-  }
+  open_header(data, key).verification()
 }
 
 ///|

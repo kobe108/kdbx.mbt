@@ -156,13 +156,86 @@ def build(password, master_seed, kdf_seed, rounds):
 
 
 PASSWORD = "correct horse battery staple"
+IV = bytes(range(16, 32))
+INNER_RANDOM_STREAM_ID = 3          # ChaCha20, as KeePass writes for KDBX 4
+INNER_RANDOM_STREAM_KEY = bytes(range(64))
+XML = b"<KeePassFile><Meta><Generator>kdbx.mbt fixture</Generator></Meta></KeePassFile>"
+
+
+def inner_header():
+    """Inner header: the random stream used to protect individual fields."""
+    out = b""
+    out += bytes([0x01]) + (4).to_bytes(4, "little") + \
+        INNER_RANDOM_STREAM_ID.to_bytes(4, "little")
+    out += bytes([0x02]) + (64).to_bytes(4, "little") + INNER_RANDOM_STREAM_KEY
+    return out + b"\x00"
+
+
+def payload():
+    """The bytes that get compressed, encrypted and written to the file."""
+    return inner_header() + XML
+
+
+def pkcs7(data, block=16):
+    pad = block - len(data) % block
+    return data + bytes([pad]) * pad
+
+
+def cbc_encrypt(key, iv, data):
+    schedule = expand_key(key)
+    out = b""
+    previous = iv
+    for offset in range(0, len(data), 16):
+        block = bytes(a ^ b for a, b in zip(data[offset:offset + 16], previous))
+        previous = encrypt_block(schedule, block)
+        out += previous
+    return out
+
+
+def block_stream(hmac_base, ciphertext, block_size=1024):
+    """HMAC-protected blocks: tag, index, size, and the ciphertext."""
+    out = b""
+    index = 0
+    chunks = [ciphertext[i:i + block_size]
+              for i in range(0, len(ciphertext), block_size)]
+    for chunk in chunks + [b""]:
+        index_bytes = index.to_bytes(8, "little")
+        size_bytes = len(chunk).to_bytes(4, "little")
+        key = hashlib.sha512(index_bytes + hmac_base).digest()
+        out += hmac.new(key, index_bytes + size_bytes + chunk, hashlib.sha256).digest()
+        out += index_bytes + size_bytes + chunk
+        index += 1
+    return out
+
+
+def build_database(password, master_seed, kdf_seed, rounds):
+    """A complete KDBX 4.1 file: header, tags, and an encrypted payload."""
+    header = build(password, master_seed, kdf_seed, rounds)
+    header_bytes = header[:len(header) - 64]
+    composite = hashlib.sha256(
+        hashlib.sha256(password.encode("utf-8")).digest()).digest()
+    transformed = aes_kdf(composite, kdf_seed, rounds)
+    base = hashlib.sha512(master_seed + transformed + b"\x01").digest()
+    encryption_key = hashlib.sha256(master_seed + transformed).digest()
+    ciphertext = cbc_encrypt(encryption_key, IV, pkcs7(payload()))
+    return header_bytes + hashlib.sha256(header_bytes).digest() + \
+        hmac.new(hashlib.sha512(b"\xff" * 8 + base).digest(), header_bytes,
+                 hashlib.sha256).digest() + block_stream(base, ciphertext)
+
+
+def emit(name, data):
+    print(f"# {name}: {len(data)} bytes")
+    for i in range(0, len(data), 32):
+        print(data[i:i + 32].hex())
 
 
 def main():
-    data = build(PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000)
-    print(f"# {len(data)} bytes, password: {PASSWORD!r}")
-    for i in range(0, len(data), 32):
-        print(data[i:i + 32].hex())
+    print(f"# password: {PASSWORD!r}")
+    emit("header fixture", build(PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000))
+    emit("database fixture",
+         build_database(PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000))
+    print("# payload plaintext")
+    print(payload().hex())
 
 
 if __name__ == "__main__":
