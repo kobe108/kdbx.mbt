@@ -1,0 +1,5 @@
+import {
+  "kobe108/kdbx" @lib,
+}
+
+pkgtype(kind: "executable")

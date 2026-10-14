@@ -1,0 +1,10 @@
+# Keep line endings consistent for everyone: LF in the repository, native in
+# the working tree (Windows tools such as Notepad handle CRLF better).
+* text=auto
+*.mbt text eol=lf
+*.mbti text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+LICENSE text eol=lf

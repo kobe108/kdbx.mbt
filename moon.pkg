@@ -1,0 +1,7 @@
+// The `kdbx` package implements the KDBX container layer (header, variant
+// dictionary, key schedule, HMAC block stream) and the database model.
+// It has no dependencies outside `moonbitlang/core` for now.
+
+import {
+  "moonbitlang/core/encoding/utf8",
+}

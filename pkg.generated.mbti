@@ -1,0 +1,155 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "kobe108/kdbx"
+
+// Values
+pub fn banner() -> String
+
+pub fn bytes_from_hex(String) -> Bytes raise KdbxError
+
+pub fn cipher_field_id() -> UInt
+
+pub fn concat_bytes(Bytes, Bytes) -> Bytes
+
+pub fn decode_variant_dict(Bytes) -> VariantDict raise KdbxError
+
+pub fn encode_variant_dict(VariantDict) -> Bytes
+
+pub let field_compression : UInt
+
+pub let field_encryption_iv : UInt
+
+pub let field_kdf_parameters : UInt
+
+pub let field_master_seed : UInt
+
+pub let field_public_custom_data : UInt
+
+pub fn hex_literal(String) -> Bytes
+
+pub fn hmac_sha256(Bytes, Bytes) -> Bytes
+
+pub let kdbx_end_of_header_value : String
+
+pub let kdbx_signature1 : UInt
+
+pub let kdbx_signature2 : UInt
+
+pub fn parse_outer_header(Bytes) -> OuterHeader raise KdbxError
+
+pub fn sha256(Bytes) -> Bytes
+
+pub fn sha512(Bytes) -> Bytes
+
+pub fn to_hex(Bytes, limit? : Int) -> String
+
+// Errors
+pub suberror KdbxError {
+  Truncated(String)
+  BadSignature
+  UnsupportedVersion(Int)
+  Unsupported(String)
+  Malformed(String)
+}
+pub fn KdbxError::message(Self) -> String
+
+// Types and methods
+pub struct Aes256 {
+  round_keys : Array[Byte]
+}
+pub fn Aes256::encrypt_block(Self, Bytes) -> Bytes raise KdbxError
+pub fn Aes256::new(Bytes) -> Self raise KdbxError
+
+pub struct ByteReader {
+  data : Bytes
+  mut offset : Int
+}
+pub fn ByteReader::at_end(Self) -> Bool
+pub fn ByteReader::new(Bytes) -> Self
+pub fn ByteReader::offset(Self) -> Int
+pub fn ByteReader::read_byte(Self) -> UInt raise KdbxError
+pub fn ByteReader::read_bytes(Self, Int) -> Bytes raise KdbxError
+pub fn ByteReader::read_int32_le(Self) -> Int raise KdbxError
+pub fn ByteReader::read_int64_le(Self) -> Int64 raise KdbxError
+pub fn ByteReader::read_rest(Self) -> Bytes raise KdbxError
+pub fn ByteReader::read_u16_le(Self) -> UInt raise KdbxError
+pub fn ByteReader::read_u32_le(Self) -> UInt raise KdbxError
+pub fn ByteReader::read_u64_le(Self) -> UInt64 raise KdbxError
+pub fn ByteReader::read_uint_le(Self, Int) -> UInt64 raise KdbxError
+pub fn ByteReader::remaining(Self) -> Int
+
+pub struct ByteWriter {
+  chunks : Array[Byte]
+}
+pub fn ByteWriter::length(Self) -> Int
+pub fn ByteWriter::new() -> Self
+pub fn ByteWriter::to_bytes(Self) -> Bytes
+pub fn ByteWriter::write_byte(Self, UInt) -> Unit
+pub fn ByteWriter::write_bytes(Self, Bytes) -> Unit
+pub fn ByteWriter::write_int32_le(Self, Int) -> Unit
+pub fn ByteWriter::write_u16_le(Self, UInt) -> Unit
+pub fn ByteWriter::write_u32_be(Self, UInt) -> Unit
+pub fn ByteWriter::write_u32_le(Self, UInt) -> Unit
+pub fn ByteWriter::write_u64_be(Self, UInt64) -> Unit
+pub fn ByteWriter::write_u64_le(Self, UInt64) -> Unit
+pub fn ByteWriter::write_uint_le(Self, UInt64, Int) -> Unit
+
+pub enum Cipher {
+  Aes256Cbc
+  ChaCha20
+  Other(Bytes)
+}
+pub fn Cipher::from_uuid(Bytes) -> Self
+pub fn Cipher::iv_length(Self) -> Int
+pub fn Cipher::to_text(Self) -> String
+
+pub enum Compression {
+  None
+  Gzip
+}
+pub fn Compression::from_flags(UInt) -> Self raise KdbxError
+pub fn Compression::to_text(Self) -> String
+
+pub struct OuterHeader {
+  version : UInt
+  fields : Array[(UInt, Bytes)]
+  consumed : Int
+}
+pub fn OuterHeader::cipher(Self) -> Cipher raise KdbxError
+pub fn OuterHeader::compression(Self) -> Compression raise KdbxError
+pub fn OuterHeader::encode(Self) -> Bytes
+pub fn OuterHeader::encryption_iv(Self) -> Bytes raise KdbxError
+pub fn OuterHeader::fields(Self) -> Array[(UInt, Bytes)]
+pub fn OuterHeader::find(Self, UInt) -> Bytes?
+pub fn OuterHeader::kdf_parameters(Self) -> VariantDict raise KdbxError
+pub fn OuterHeader::major(Self) -> Int
+pub fn OuterHeader::master_seed(Self) -> Bytes raise KdbxError
+pub fn OuterHeader::minor(Self) -> Int
+pub fn OuterHeader::revision(Self) -> String
+
+pub struct VariantDict {
+  entries : Array[(String, VariantValue)]
+}
+pub fn VariantDict::entries(Self) -> Array[(String, VariantValue)]
+pub fn VariantDict::get(Self, String) -> VariantValue?
+pub fn VariantDict::get_bytes(Self, String) -> Bytes?
+pub fn VariantDict::get_uint32(Self, String) -> UInt?
+pub fn VariantDict::get_uint64(Self, String) -> UInt64?
+pub fn VariantDict::length(Self) -> Int
+pub fn VariantDict::new() -> Self
+pub fn VariantDict::set(Self, String, VariantValue) -> Unit
+pub fn VariantDict::to_text(Self) -> String
+
+pub enum VariantValue {
+  VUInt32(UInt)
+  VUInt64(UInt64)
+  VBool(Bool)
+  VInt32(Int)
+  VInt64(Int64)
+  VString(String)
+  VBytes(Bytes)
+}
+pub fn VariantValue::to_text(Self) -> String
+
+// Type aliases
+
+// Traits
