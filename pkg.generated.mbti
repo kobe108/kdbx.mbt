@@ -2,6 +2,8 @@
 package "kobe108/kdbx"
 
 // Values
+pub fn aes_kdf_from_parameters(VariantDict) -> AesKdf raise KdbxError
+
 pub fn banner() -> String
 
 pub fn bytes_from_hex(String) -> Bytes raise KdbxError
@@ -11,6 +13,14 @@ pub fn cipher_field_id() -> UInt
 pub fn concat_bytes(Bytes, Bytes) -> Bytes
 
 pub fn decode_variant_dict(Bytes) -> VariantDict raise KdbxError
+
+pub fn derive_block_hmac_key(Bytes, UInt64) -> Bytes raise KdbxError
+
+pub fn derive_encryption_key(Bytes, Bytes) -> Bytes raise KdbxError
+
+pub fn derive_header_hmac_key(Bytes) -> Bytes raise KdbxError
+
+pub fn derive_hmac_key_base(Bytes, Bytes) -> Bytes raise KdbxError
 
 pub fn encode_variant_dict(VariantDict) -> Bytes
 
@@ -57,7 +67,15 @@ pub struct Aes256 {
   round_keys : Array[Byte]
 }
 pub fn Aes256::encrypt_block(Self, Bytes) -> Bytes raise KdbxError
+pub fn Aes256::encrypt_in_place(Self, Array[Byte], Int, Array[Byte]) -> Unit raise KdbxError
 pub fn Aes256::new(Bytes) -> Self raise KdbxError
+
+pub struct AesKdf {
+  seed : Bytes
+  rounds : UInt64
+}
+pub fn AesKdf::rounds(Self) -> UInt64
+pub fn AesKdf::transform(Self, Bytes) -> Bytes raise KdbxError
 
 pub struct ByteReader {
   data : Bytes
@@ -108,6 +126,15 @@ pub enum Compression {
 }
 pub fn Compression::from_flags(UInt) -> Self raise KdbxError
 pub fn Compression::to_text(Self) -> String
+
+pub struct MasterKey {
+  components : Array[Bytes]
+}
+pub fn MasterKey::component_count(Self) -> Int
+pub fn MasterKey::composite(Self) -> Bytes raise KdbxError
+pub fn MasterKey::new() -> Self
+pub fn MasterKey::with_component(Self, Bytes) -> Self
+pub fn MasterKey::with_password(Self, String) -> Self
 
 pub struct OuterHeader {
   version : UInt

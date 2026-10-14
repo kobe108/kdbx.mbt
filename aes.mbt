@@ -124,55 +124,103 @@ pub fn Aes256::encrypt_block(
       "AES blocks are 16 bytes, got " + block.length().to_string(),
     )
   }
-  let state : Array[Byte] = []
+  let buffer : Array[Byte] = []
   for i = 0; i < 16; i = i + 1 {
-    state.push(block[i])
+    buffer.push(block[i])
   }
-  add_round_key(state, self.round_keys, 0)
-  let mut round = 1
-  while round < aes256_rounds {
-    sub_bytes(state)
-    shift_rows(state)
-    mix_columns(state)
-    add_round_key(state, self.round_keys, round)
-    round = round + 1
-  }
-  sub_bytes(state)
-  shift_rows(state)
-  add_round_key(state, self.round_keys, aes256_rounds)
-  Bytes::from_array(state)
+  self.encrypt_in_place(buffer, 0, zero_bytes(16))
+  Bytes::from_array(buffer)
 }
 
 ///|
-/// XORs the state with the round key of `round` (column-major word order).
+/// Encrypts the 16 bytes at `offset` in place.
+///
+/// AES-KDF applies this transformation millions of times, so the caller brings
+/// its own `scratch` buffer (16 bytes) and the inner loop allocates nothing.
+pub fn Aes256::encrypt_in_place(
+  self : Aes256,
+  buffer : Array[Byte],
+  offset : Int,
+  scratch : Array[Byte],
+) -> Unit raise KdbxError {
+  if offset < 0 || offset + 16 > buffer.length() {
+    raise Malformed(
+      "AES block at offset \{offset} does not fit in a \{buffer.length()}-byte buffer",
+    )
+  }
+  if scratch.length() < 16 {
+    raise Malformed(
+      "AES scratch buffer must hold 16 bytes, got \{scratch.length()}",
+    )
+  }
+  add_round_key(buffer, offset, self.round_keys, 0)
+  let mut round = 1
+  while round < aes256_rounds {
+    sub_bytes(buffer, offset)
+    shift_rows(buffer, offset, scratch)
+    mix_columns(buffer, offset)
+    add_round_key(buffer, offset, self.round_keys, round)
+    round = round + 1
+  }
+  sub_bytes(buffer, offset)
+  shift_rows(buffer, offset, scratch)
+  add_round_key(buffer, offset, self.round_keys, aes256_rounds)
+}
+
+///|
+/// A zero-filled byte buffer of `count` bytes.
+fn zero_bytes(count : Int) -> Array[Byte] {
+  let out : Array[Byte] = []
+  let mut i = 0
+  while i < count {
+    out.push(0)
+    i = i + 1
+  }
+  out
+}
+
+///|
+/// XORs the block at `offset` with the round key of `round` (column-major word
+/// order, as in FIPS-197).
 fn add_round_key(
-  state : Array[Byte],
+  buffer : Array[Byte],
+  offset : Int,
   round_keys : Array[Byte],
   round : Int,
 ) -> Unit {
-  let offset = round * 16
+  let key_offset = round * 16
   for i = 0; i < 16; i = i + 1 {
-    state[i] = (state[i].to_uint() ^ round_keys[offset + i].to_uint()).to_byte()
+    buffer[offset + i] = (buffer[offset + i].to_uint() ^
+    round_keys[key_offset + i].to_uint()).to_byte()
   }
 }
 
 ///|
-fn sub_bytes(state : Array[Byte]) -> Unit {
+fn sub_bytes(buffer : Array[Byte], offset : Int) -> Unit {
   for i = 0; i < 16; i = i + 1 {
-    state[i] = aes_sbox[state[i].to_uint().reinterpret_as_int()]
+    buffer[offset + i] = aes_sbox[buffer[offset + i]
+      .to_uint()
+      .reinterpret_as_int()]
   }
 }
 
 ///|
-/// Rotates each row left by its row index. The state is stored column-major, so
-/// row `r` owns the indices `r, r + 4, r + 8, r + 12`.
-fn shift_rows(state : Array[Byte]) -> Unit {
-  let copy = state.copy()
+/// Rotates each row left by its row index. The state is column-major, so row `r`
+/// owns the indices `r, r + 4, r + 8, r + 12` of the block; `scratch` holds the
+/// copy the rotation reads from.
+fn shift_rows(
+  buffer : Array[Byte],
+  offset : Int,
+  scratch : Array[Byte],
+) -> Unit {
+  for i = 0; i < 16; i = i + 1 {
+    scratch[i] = buffer[offset + i]
+  }
   let mut row = 1
   while row < 4 {
     let mut column = 0
     while column < 4 {
-      state[row + 4 * column] = copy[row + 4 * ((column + row) % 4)]
+      buffer[offset + row + 4 * column] = scratch[row + 4 * ((column + row) % 4)]
       column = column + 1
     }
     row = row + 1
@@ -181,18 +229,18 @@ fn shift_rows(state : Array[Byte]) -> Unit {
 
 ///|
 /// Mixes each column independently (FIPS-197, section 5.1.3).
-fn mix_columns(state : Array[Byte]) -> Unit {
+fn mix_columns(buffer : Array[Byte], offset : Int) -> Unit {
   let mut column = 0
   while column < 4 {
-    let offset = column * 4
-    let a0 = state[offset].to_uint()
-    let a1 = state[offset + 1].to_uint()
-    let a2 = state[offset + 2].to_uint()
-    let a3 = state[offset + 3].to_uint()
-    state[offset] = (xtime(a0) ^ (xtime(a1) ^ a1) ^ a2 ^ a3).to_byte()
-    state[offset + 1] = (a0 ^ xtime(a1) ^ (xtime(a2) ^ a2) ^ a3).to_byte()
-    state[offset + 2] = (a0 ^ a1 ^ xtime(a2) ^ (xtime(a3) ^ a3)).to_byte()
-    state[offset + 3] = (xtime(a0) ^ a0 ^ a1 ^ a2 ^ xtime(a3)).to_byte()
+    let base = offset + column * 4
+    let a0 = buffer[base].to_uint()
+    let a1 = buffer[base + 1].to_uint()
+    let a2 = buffer[base + 2].to_uint()
+    let a3 = buffer[base + 3].to_uint()
+    buffer[base] = (xtime(a0) ^ (xtime(a1) ^ a1) ^ a2 ^ a3).to_byte()
+    buffer[base + 1] = (a0 ^ xtime(a1) ^ (xtime(a2) ^ a2) ^ a3).to_byte()
+    buffer[base + 2] = (a0 ^ a1 ^ xtime(a2) ^ (xtime(a3) ^ a3)).to_byte()
+    buffer[base + 3] = (xtime(a0) ^ a0 ^ a1 ^ a2 ^ xtime(a3)).to_byte()
     column = column + 1
   }
 }

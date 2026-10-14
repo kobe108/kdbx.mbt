@@ -28,7 +28,8 @@
 | 容器层 | VariantDictionary 编解码（KDF 参数、插件数据的载体） | 已完成 |
 | 密码学 | SHA-256、SHA-512 与 HMAC-SHA-256（FIPS 180-4 / RFC 4231 官方向量验证） | 已完成 |
 | 密码学 | AES-256 分组加密（FIPS-197 用例 + 独立实现交叉验证，加密方向） | 已完成 |
-| 密钥层 | 复合主密钥、AES-KDF、头部 HMAC 校验 | 进行中 |
+| 密钥层 | 复合主密钥、AES-KDF 与加密密钥/HMAC 密钥派生 | 已完成 |
+| 密钥层 | 头部 SHA-256 与 HMAC 校验（对真实文件验签） | 进行中 |
 | 数据层 | HMAC 块流校验、AES-256-CBC / ChaCha20 解密、inner header、gzip 解压 | 计划中 |
 | 模型层 | XML 载荷解析、分组与条目模型、附件 | 计划中 |
 | 产品层 | CLI：`info` / `ls` / `show` / `audit` / `export` | 计划中 |
