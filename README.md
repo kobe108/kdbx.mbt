@@ -29,7 +29,7 @@
 | 密码学 | SHA-256、SHA-512 与 HMAC-SHA-256（FIPS 180-4 / RFC 4231 官方向量验证） | 已完成 |
 | 密码学 | AES-256 分组加密（FIPS-197 用例 + 独立实现交叉验证，加密方向） | 已完成 |
 | 密钥层 | 复合主密钥、AES-KDF 与加密密钥/HMAC 密钥派生 | 已完成 |
-| 密钥层 | 头部 SHA-256 与 HMAC 校验（对真实文件验签） | 进行中 |
+| 密钥层 | 头部 SHA-256 与 HMAC-SHA-256 校验（含篡改与截断检测） | 已完成 |
 | 数据层 | HMAC 块流校验、AES-256-CBC / ChaCha20 解密、inner header、gzip 解压 | 计划中 |
 | 模型层 | XML 载荷解析、分组与条目模型、附件 | 计划中 |
 | 产品层 | CLI：`info` / `ls` / `show` / `audit` / `export` | 计划中 |
@@ -87,6 +87,13 @@ for entry in header.kdf_parameters().entries() {
    是否引入第三方包由 [docs/DESIGN.md](docs/DESIGN.md) 的依赖策略决定。
 4. **真实文件才作数**：互操作测试使用真实的 KDBX 文件（按许可证要求，
    测试数据不随仓库分发，见设计文档）。
+
+### 测试数据从哪来
+
+仓库里的 fixtures（例如头部验签用的 271 字节 KDBX 4.1 文件前缀）**由
+[scripts/make_fixture.py](scripts/make_fixture.py) 按规范生成**，不是从别处拷来的二进制，
+来源可复现、许可证干净、不含任何真实凭据。需要与 KeePass / KeePassXC 产出物
+互操作时，测试按固定提交号从上游下载，不随仓库分发。
 
 ## 许可证
 

@@ -191,7 +191,8 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 | 测试数据许可证 | 可能违反开源合规 | 不分发上游测试文件；CI 按固定提交号下载 |
 | 范围膨胀 | 18 天做不完 | MVP 只保读路径与 `info`、`ls`、`show`；写入与 ChaCha20 明确列为进阶 |
 | 本机缺少 Git | 无法安装第三方依赖 | README 明确说明；容器层保持零依赖，缺 Git 也能编译与测试 |
-| AES-KDF 性能 | 真实库常用数百万轮 AES 变换，纯 MoonBit 可能耗时过长 | 实测：release 下约 38 万轮/秒（600 万轮约 16 秒，6000 万轮约 2.6 分钟），见 docs/ROADMAP.md；热点在每轮 ShiftRows 拷贝与边界检查，必要时再做 T 表优化 |
+| AES-KDF 性能 | 真实库常用数百万轮 AES 变换，纯 MoonBit 可能耗时过长 | 实测：release 下约 85 万轮/秒（600 万轮约 7 秒，6000 万轮约 70 秒），见 docs/ROADMAP.md；已做掉 ShiftRows 的每轮拷贝，进一步优化需 T 表 |
+| 测试数据来源 | 借用别人的 `.kdbx` 测试文件会带来许可证问题 | fixtures 由仓库内 `scripts/make_fixture.py` 按规范生成，来源可复现；互操作测试再按固定提交号下载上游文件 |
 
 ## 10. 验收标准对照
 

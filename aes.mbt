@@ -128,55 +128,37 @@ pub fn Aes256::encrypt_block(
   for i = 0; i < 16; i = i + 1 {
     buffer.push(block[i])
   }
-  self.encrypt_in_place(buffer, 0, zero_bytes(16))
+  self.encrypt_in_place(buffer, 0)
   Bytes::from_array(buffer)
 }
 
 ///|
 /// Encrypts the 16 bytes at `offset` in place.
 ///
-/// AES-KDF applies this transformation millions of times, so the caller brings
-/// its own `scratch` buffer (16 bytes) and the inner loop allocates nothing.
+/// AES-KDF applies this transformation millions of times, so the routine works
+/// directly on the caller's buffer and allocates nothing.
 pub fn Aes256::encrypt_in_place(
   self : Aes256,
   buffer : Array[Byte],
   offset : Int,
-  scratch : Array[Byte],
 ) -> Unit raise KdbxError {
   if offset < 0 || offset + 16 > buffer.length() {
     raise Malformed(
       "AES block at offset \{offset} does not fit in a \{buffer.length()}-byte buffer",
     )
   }
-  if scratch.length() < 16 {
-    raise Malformed(
-      "AES scratch buffer must hold 16 bytes, got \{scratch.length()}",
-    )
-  }
   add_round_key(buffer, offset, self.round_keys, 0)
   let mut round = 1
   while round < aes256_rounds {
     sub_bytes(buffer, offset)
-    shift_rows(buffer, offset, scratch)
+    shift_rows(buffer, offset)
     mix_columns(buffer, offset)
     add_round_key(buffer, offset, self.round_keys, round)
     round = round + 1
   }
   sub_bytes(buffer, offset)
-  shift_rows(buffer, offset, scratch)
+  shift_rows(buffer, offset)
   add_round_key(buffer, offset, self.round_keys, aes256_rounds)
-}
-
-///|
-/// A zero-filled byte buffer of `count` bytes.
-fn zero_bytes(count : Int) -> Array[Byte] {
-  let out : Array[Byte] = []
-  let mut i = 0
-  while i < count {
-    out.push(0)
-    i = i + 1
-  }
-  out
 }
 
 ///|
@@ -206,25 +188,28 @@ fn sub_bytes(buffer : Array[Byte], offset : Int) -> Unit {
 
 ///|
 /// Rotates each row left by its row index. The state is column-major, so row `r`
-/// owns the indices `r, r + 4, r + 8, r + 12` of the block; `scratch` holds the
-/// copy the rotation reads from.
-fn shift_rows(
-  buffer : Array[Byte],
-  offset : Int,
-  scratch : Array[Byte],
-) -> Unit {
-  for i = 0; i < 16; i = i + 1 {
-    scratch[i] = buffer[offset + i]
-  }
-  let mut row = 1
-  while row < 4 {
-    let mut column = 0
-    while column < 4 {
-      buffer[offset + row + 4 * column] = scratch[row + 4 * ((column + row) % 4)]
-      column = column + 1
-    }
-    row = row + 1
-  }
+/// owns the indices `r, r + 4, r + 8, r + 12` of the block.
+///
+/// Each row is rotated in place with a single temporary byte, which keeps the
+/// hot loop free of the 16-byte scratch copy and of a second pass over the
+/// block (measured in docs/ROADMAP.md).
+fn shift_rows(buffer : Array[Byte], offset : Int) -> Unit {
+  let first = buffer[offset + 1]
+  buffer[offset + 1] = buffer[offset + 5]
+  buffer[offset + 5] = buffer[offset + 9]
+  buffer[offset + 9] = buffer[offset + 13]
+  buffer[offset + 13] = first
+  let second = buffer[offset + 2]
+  let sixth = buffer[offset + 6]
+  buffer[offset + 2] = buffer[offset + 10]
+  buffer[offset + 6] = buffer[offset + 14]
+  buffer[offset + 10] = second
+  buffer[offset + 14] = sixth
+  let last = buffer[offset + 15]
+  buffer[offset + 15] = buffer[offset + 11]
+  buffer[offset + 11] = buffer[offset + 7]
+  buffer[offset + 7] = buffer[offset + 3]
+  buffer[offset + 3] = last
 }
 
 ///|

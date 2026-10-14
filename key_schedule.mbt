@@ -154,11 +154,10 @@ pub fn AesKdf::transform(
   for i = 0; i < 32; i = i + 1 {
     buffer.push(composite[i])
   }
-  let scratch = zero_bytes(16)
   let mut round : UInt64 = 0
   while round < self.rounds {
-    cipher.encrypt_in_place(buffer, 0, scratch)
-    cipher.encrypt_in_place(buffer, 16, scratch)
+    cipher.encrypt_in_place(buffer, 0)
+    cipher.encrypt_in_place(buffer, 16)
     round = round + 1
   }
   Bytes::from_array(buffer)

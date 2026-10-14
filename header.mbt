@@ -120,7 +120,15 @@ pub fn parse_outer_header(data : Bytes) -> OuterHeader raise KdbxError {
   }
   let version = reader.read_u32_le()
   let major = (version >> 16) & 0xFFFF
-  if major != 3 && major != 4 {
+  if major == 3 {
+    // KDBX 3.1 headers store field lengths in two bytes and authenticate the
+    // header with a plain hash instead of an HMAC, so reading one with this
+    // parser would produce nonsense. Say so, rather than fail obscurely.
+    raise Unsupported(
+      "KDBX 3.1 files are not implemented yet (docs/ROADMAP.md)",
+    )
+  }
+  if major != 4 {
     raise UnsupportedVersion(major.reinterpret_as_int())
   }
   let fields : Array[(UInt, Bytes)] = []
@@ -163,6 +171,15 @@ pub fn OuterHeader::revision(self : OuterHeader) -> String {
 ///|
 pub fn OuterHeader::fields(self : OuterHeader) -> Array[(UInt, Bytes)] {
   self.fields.copy()
+}
+
+///|
+/// Number of bytes the header occupies, including the end-of-header field.
+///
+/// The header hash and the header HMAC follow immediately after, so a caller
+/// that wants to verify them needs this number.
+pub fn OuterHeader::byte_length(self : OuterHeader) -> Int {
+  self.consumed
 }
 
 ///|

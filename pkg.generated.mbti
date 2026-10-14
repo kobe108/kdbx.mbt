@@ -12,6 +12,8 @@ pub fn cipher_field_id() -> UInt
 
 pub fn concat_bytes(Bytes, Bytes) -> Bytes
 
+pub fn constant_time_equal(Bytes, Bytes) -> Bool
+
 pub fn decode_variant_dict(Bytes) -> VariantDict raise KdbxError
 
 pub fn derive_block_hmac_key(Bytes, UInt64) -> Bytes raise KdbxError
@@ -52,6 +54,8 @@ pub fn sha512(Bytes) -> Bytes
 
 pub fn to_hex(Bytes, limit? : Int) -> String
 
+pub fn verify_header(Bytes, MasterKey) -> HeaderVerification raise KdbxError
+
 // Errors
 pub suberror KdbxError {
   Truncated(String)
@@ -67,7 +71,7 @@ pub struct Aes256 {
   round_keys : Array[Byte]
 }
 pub fn Aes256::encrypt_block(Self, Bytes) -> Bytes raise KdbxError
-pub fn Aes256::encrypt_in_place(Self, Array[Byte], Int, Array[Byte]) -> Unit raise KdbxError
+pub fn Aes256::encrypt_in_place(Self, Array[Byte], Int) -> Unit raise KdbxError
 pub fn Aes256::new(Bytes) -> Self raise KdbxError
 
 pub struct AesKdf {
@@ -127,6 +131,17 @@ pub enum Compression {
 pub fn Compression::from_flags(UInt) -> Self raise KdbxError
 pub fn Compression::to_text(Self) -> String
 
+pub struct HeaderVerification {
+  revision : String
+  cipher : Cipher
+  compression : Compression
+  kdf_rounds : UInt64
+}
+pub fn HeaderVerification::cipher(Self) -> Cipher
+pub fn HeaderVerification::compression(Self) -> Compression
+pub fn HeaderVerification::kdf_rounds(Self) -> UInt64
+pub fn HeaderVerification::revision(Self) -> String
+
 pub struct MasterKey {
   components : Array[Bytes]
 }
@@ -141,6 +156,7 @@ pub struct OuterHeader {
   fields : Array[(UInt, Bytes)]
   consumed : Int
 }
+pub fn OuterHeader::byte_length(Self) -> Int
 pub fn OuterHeader::cipher(Self) -> Cipher raise KdbxError
 pub fn OuterHeader::compression(Self) -> Compression raise KdbxError
 pub fn OuterHeader::encode(Self) -> Bytes
