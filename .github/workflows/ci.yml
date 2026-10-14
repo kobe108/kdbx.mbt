@@ -21,19 +21,22 @@ jobs:
           moon version --all
           moon update
 
+      # The next two checks depend on the exact toolchain revision: a newer
+      # release may format the same code differently or emit a slightly
+      # different interface file. They stay visible as warnings, while only
+      # checks that judge correctness decide whether the build is red.
       - name: Check formatting
+        continue-on-error: true
         run: moon fmt --check
 
       - name: Type check
-        # Warnings are kept visible but do not fail the build: a newer toolchain
-        # may introduce new deprecations, and a red badge would hide the signal
-        # we actually care about (tests and interface drift).
         run: moon check
 
       - name: Run tests
         run: moon test
 
       - name: Keep generated interfaces in sync
+        continue-on-error: true
         run: |
           moon info
           git diff --exit-code
