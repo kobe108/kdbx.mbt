@@ -133,6 +133,24 @@ pub fn Aes256::encrypt_block(
 }
 
 ///|
+/// Encrypts both 16-byte halves of a 32-byte buffer in place.
+///
+/// AES-KDF is the only caller and it runs this millions of times, so the two
+/// checks a pair of separate calls would repeat are done once here.
+pub fn Aes256::encrypt_two_blocks_in_place(
+  self : Aes256,
+  buffer : Array[Byte],
+) -> Unit raise KdbxError {
+  if buffer.length() < 32 {
+    raise Malformed(
+      "two AES blocks need a 32-byte buffer, got \{buffer.length()}",
+    )
+  }
+  self.encrypt_in_place(buffer, 0)
+  self.encrypt_in_place(buffer, 16)
+}
+
+///|
 /// Encrypts the 16 bytes at `offset` in place.
 ///
 /// AES-KDF applies this transformation millions of times, so the routine works

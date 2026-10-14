@@ -31,7 +31,8 @@
 | 密钥层 | 复合主密钥、AES-KDF 与加密密钥/HMAC 密钥派生 | 已完成 |
 | 密钥层 | 头部 SHA-256 与 HMAC-SHA-256 校验（含篡改与截断检测） | 已完成 |
 | 数据层 | HMAC 块流校验、AES-256-CBC 解密、PKCS#7 去填充 | 已完成 |
-| 数据层 | gzip 解压、结构化 inner header、ChaCha20 载荷 | 进行中 |
+| 数据层 | inner header 结构化解析（随机流与附件） | 已完成 |
+| 数据层 | gzip 解压、ChaCha20 载荷 | 进行中 |
 | 模型层 | XML 载荷解析、分组与条目模型、附件 | 计划中 |
 | 产品层 | CLI：`info` / `ls` / `show` / `audit` / `export` | 计划中 |
 

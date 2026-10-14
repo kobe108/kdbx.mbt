@@ -156,8 +156,7 @@ pub fn AesKdf::transform(
   }
   let mut round : UInt64 = 0
   while round < self.rounds {
-    cipher.encrypt_in_place(buffer, 0)
-    cipher.encrypt_in_place(buffer, 16)
+    cipher.encrypt_two_blocks_in_place(buffer)
     round = round + 1
   }
   Bytes::from_array(buffer)
