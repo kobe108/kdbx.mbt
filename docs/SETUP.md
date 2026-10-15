@@ -37,6 +37,16 @@ git commit -m "feat: KDBX 4.x outer header and variant dictionary"
 提交信息建议采用约定式提交（`feat:` / `fix:` / `docs:` / `test:`），
 这样后续要生成变更日志时不用回头整理。
 
+**提交时间请使用 UTC**：
+
+```bash
+TZ=UTC0 git commit -m "..."
+```
+
+原因是当 `github.com:443` 不可用时（部分网络环境下会长时间不通），
+本项目的备用推送路径会用 GitHub API 重建同一个提交对象；GitHub 会把时间戳归一化成 UTC，
+本地若带 `+08:00` 偏移，两边算出的提交哈希就会不同。`work/push.ps1` 已经固定了这一点。
+
 ## 4. 推送到 GitHub
 
 先在 GitHub 上创建一个空仓库 `kobe108/kdbx.mbt`（不要勾选自动生成 README，
