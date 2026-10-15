@@ -41,9 +41,6 @@ pub fn decrypt_payload(data : Bytes, key : MasterKey) -> Bytes raise KdbxError {
   )
   match opened.compression() {
     None => plaintext
-    Gzip =>
-      raise Unsupported(
-        "gzip-compressed payloads are not implemented yet (docs/ROADMAP.md, F9b)",
-      )
+    Gzip => gunzip(plaintext)
   }
 }

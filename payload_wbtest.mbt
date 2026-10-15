@@ -1,4 +1,26 @@
 ///|
+/// A compressed database: the same header, but the payload is a gzip stream and
+/// the compression flag says so. Decrypting it exercises the whole chain
+/// including inflate, and the plaintext is known because the generator wrote it.
+fn compressed_database() -> Bytes {
+  hex_literal(
+    "03d9a29a67fb4bb501000400021000000031c1f2e6bf714350be5805216afc5aff0304000000010000000420000000101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f0710000000101112131415161718191a1b1c1d1e1f0b5d00000000014205000000245555494410000000c9d9f39a628a4460bf740d08c18a4fea42010000005320000000000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f05010000005208000000e8030000000000000000040000000d0a0d0aa7198857cc3f2071207493775f2b77497e5fe6a1fbce8c3e00bba1bbafca933c3f0996969fd8acf85f5c1487486b889e8e6ad43bec18c70fdb15bf15d5406e6a32ef8fd9a6c19d38bd977252b42c8950dfc695a0030ab1be35287d3316ee3a52000000000000000050000000ee7c6508b2d22014d46f9ac4fff76716cb7e67b636c1b8011f35ecdb9100057d9663d64b0350eb979228acf97513f9044339758cc00c07d3d594a47b1ec8a94f35555857e150dd7ac766b74ed623675d5ab911bd588a86a23c54363c42aa91ecfc4fd02d298dd3d04bfa6953a6383fbb010000000000000000000000",
+  )
+}
+
+///|
+/// End to end on a compressed file: the compression flag is honoured and the
+/// payload comes back as the generator's plaintext.
+test "a compressed database decrypts and inflates" {
+  let key = MasterKey::new().with_password("correct horse battery staple")
+  let payload = decrypt_payload(compressed_database(), key)
+  assert_eq(
+    to_hex(payload),
+    to_hex(ascii_bytes("compressed payload for the kdbx.mbt test suite")),
+  )
+}
+
+///|
 /// A complete KDBX 4.1 file produced by scripts/make_fixture.py: header, header
 /// tags, an HMAC-protected block stream and an AES-256-CBC payload holding the
 /// inner header (ChaCha20 random stream) plus a small XML document. Password

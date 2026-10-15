@@ -11,6 +11,8 @@ correct implementation must accept.
 """
 import hashlib
 import hmac
+import gzip as gzip_module
+import zlib
 
 # --- AES-256 (encryption direction only, ECB over single blocks) -------------
 
@@ -131,11 +133,11 @@ def aes_kdf(composite, seed, rounds):
     return bytes(buffer)
 
 
-def build(password, master_seed, kdf_seed, rounds):
+def build(password, master_seed, kdf_seed, rounds, compression=0):
     header = b"\x03\xd9\xa2\x9a\x67\xfb\x4b\xb5"          # signature words
     header += (0x00040001).to_bytes(4, "little")           # format version 4.1
     header += field(2, AES256_CBC_UUID)
-    header += field(3, (0).to_bytes(4, "little"))          # compression: none
+    header += field(3, compression.to_bytes(4, "little"))  # 0 none, 1 gzip
     header += field(4, master_seed)
     header += field(7, bytes(range(16, 32)))               # encryption IV
     header += field(11, variant_dictionary([
@@ -229,6 +231,55 @@ def emit(name, data):
         print(data[i:i + 32].hex())
 
 
+SMALL_PAYLOAD = b"compressed payload for the kdbx.mbt test suite"
+
+
+def compressed_database(password, master_seed, kdf_seed, rounds,
+                        contents=SMALL_PAYLOAD):
+    """Same database, but with the payload gzipped and the flag set.
+
+    The payload is kept short so the whole file can be embedded in a test as
+    hex; the realistic payload is covered by the uncompressed fixture.
+    """
+    header = build(password, master_seed, kdf_seed, rounds, compression=1)
+    header_bytes = header[:len(header) - 64]
+    composite = hashlib.sha256(
+        hashlib.sha256(password.encode("utf-8")).digest()).digest()
+    transformed = aes_kdf(composite, kdf_seed, rounds)
+    base = hashlib.sha512(master_seed + transformed + b"\x01").digest()
+    encryption_key = hashlib.sha256(master_seed + transformed).digest()
+    # KDBX's compression flag means the gzip container, not the zlib one.
+    ciphertext = cbc_encrypt(
+        encryption_key, IV, pkcs7(gzip_module.compress(contents)))
+    return header_bytes + hashlib.sha256(header_bytes).digest() + \
+        hmac.new(hashlib.sha512(b"\xff" * 8 + base).digest(), header_bytes,
+                 hashlib.sha256).digest() + block_stream(base, ciphertext)
+
+
+TEXT_LINE = b"the quick brown fox jumps over the lazy dog "
+
+
+def raw_deflate(data, level=9, strategy=zlib.Z_DEFAULT_STRATEGY):
+    """A raw DEFLATE stream (wbits = -15), exactly what gzip hands to inflate."""
+    compressor = zlib.compressobj(level, zlib.DEFLATED, -15, 9, strategy)
+    return compressor.compress(data) + compressor.flush()
+
+
+def sha_derived(count):
+    """Incompressible bytes derived from SHA-256, reproducible in the test."""
+    return b"".join(hashlib.sha256(i.to_bytes(4, "little")).digest()
+                    for i in range(count // 32))
+
+
+def deflate_variants():
+    """One stream per DEFLATE block type, so each decoding path is exercised."""
+    return [
+        ("stored", sha_derived(512), raw_deflate(sha_derived(512), 9)),
+        ("fixed", TEXT_LINE * 16, raw_deflate(TEXT_LINE * 16, 9, zlib.Z_FIXED)),
+        ("dynamic", TEXT_LINE * 64, raw_deflate(TEXT_LINE * 64, 9)),
+    ]
+
+
 def main():
     print(f"# password: {PASSWORD!r}")
     emit("header fixture", build(PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000))
@@ -236,6 +287,22 @@ def main():
          build_database(PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000))
     print("# payload plaintext")
     print(payload().hex())
+    emit("compressed database fixture",
+         compressed_database(PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000))
+    print("# compressed fixture as one line, for embedding in a test")
+    print(compressed_database(
+        PASSWORD, bytes(range(16, 48)), bytes(range(32)), 1000).hex())
+    print("# compressed fixture plaintext")
+    print(SMALL_PAYLOAD.hex())
+    print("# standalone gzip stream of that plaintext")
+    print(gzip_module.compress(SMALL_PAYLOAD).hex())
+    for name, plain, stream in deflate_variants():
+        # Bits 1-2 of the first byte are the block type; report the one the
+        # compressor actually chose so the test cannot claim coverage it lacks.
+        block_type = (stream[0] >> 1) & 0x03
+        print(f"# deflate {name}: plaintext {len(plain)} bytes, "
+              f"stream {len(stream)} bytes, block type {block_type}")
+        print(stream.hex())
 
 
 if __name__ == "__main__":

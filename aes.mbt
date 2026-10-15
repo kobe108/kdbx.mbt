@@ -165,18 +165,41 @@ pub fn Aes256::encrypt_in_place(
       "AES block at offset \{offset} does not fit in a \{buffer.length()}-byte buffer",
     )
   }
-  add_round_key(buffer, offset, self.round_keys, 0)
+  // The round key of one round is XORed into the state immediately before the
+  // next round's SubBytes, so the two are done in a single pass: that removes
+  // one traversal of the block per round compared with the textbook order.
+  sub_bytes_xor_key(buffer, offset, self.round_keys, 0)
   let mut round = 1
   while round < aes256_rounds {
-    sub_bytes(buffer, offset)
     shift_rows(buffer, offset)
     mix_columns(buffer, offset)
-    add_round_key(buffer, offset, self.round_keys, round)
+    sub_bytes_xor_key(buffer, offset, self.round_keys, round)
     round = round + 1
   }
-  sub_bytes(buffer, offset)
   shift_rows(buffer, offset)
   add_round_key(buffer, offset, self.round_keys, aes256_rounds)
+}
+
+///|
+/// Applies SubBytes and the round-key XOR in one traversal.
+///
+/// Valid because AddRoundKey of round `r` is followed directly by SubBytes of
+/// round `r + 1`, with nothing in between, and XOR is its own inverse.
+fn sub_bytes_xor_key(
+  buffer : Array[Byte],
+  offset : Int,
+  round_keys : Array[Byte],
+  round : Int,
+) -> Unit {
+  let key_offset = round * 16
+  for i = 0; i < 16; i = i + 1 {
+    // The key is mixed in first and the S-box applied second: that is the order
+    // the round structure requires (AddRoundKey of one round, then SubBytes of
+    // the next), and the two operations do not commute.
+    let mixed = buffer[offset + i].to_uint() ^
+      round_keys[key_offset + i].to_uint()
+    buffer[offset + i] = aes_sbox[mixed.reinterpret_as_int()]
+  }
 }
 
 ///|
@@ -192,15 +215,6 @@ fn add_round_key(
   for i = 0; i < 16; i = i + 1 {
     buffer[offset + i] = (buffer[offset + i].to_uint() ^
     round_keys[key_offset + i].to_uint()).to_byte()
-  }
-}
-
-///|
-fn sub_bytes(buffer : Array[Byte], offset : Int) -> Unit {
-  for i = 0; i < 16; i = i + 1 {
-    buffer[offset + i] = aes_sbox[buffer[offset + i]
-      .to_uint()
-      .reinterpret_as_int()]
   }
 }
 
