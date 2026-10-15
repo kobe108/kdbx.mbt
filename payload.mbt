@@ -2,6 +2,19 @@
 /// Reading the encrypted payload: block stream, cipher, padding.
 
 ///|
+/// Opens a database and splits the plaintext into its two parts: the inner
+/// header (random stream, attachments) and the XML document.
+///
+/// This is the shape the command line tool needs, and the shape the entry model
+/// will consume, so it is exposed rather than repeated by every caller.
+pub fn open_database(
+  data : Bytes,
+  key : MasterKey,
+) -> (InnerHeader, Bytes) raise KdbxError {
+  split_payload(decrypt_payload(data, key))
+}
+
+///|
 /// Opens a database far enough to return the decrypted payload.
 ///
 /// This is the point where a database finally becomes data: the header has been

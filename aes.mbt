@@ -240,10 +240,16 @@ fn mix_columns(buffer : Array[Byte], offset : Int) -> Unit {
     let a1 = buffer[base + 1].to_uint()
     let a2 = buffer[base + 2].to_uint()
     let a3 = buffer[base + 3].to_uint()
-    buffer[base] = (xtime(a0) ^ (xtime(a1) ^ a1) ^ a2 ^ a3).to_byte()
-    buffer[base + 1] = (a0 ^ xtime(a1) ^ (xtime(a2) ^ a2) ^ a3).to_byte()
-    buffer[base + 2] = (a0 ^ a1 ^ xtime(a2) ^ (xtime(a3) ^ a3)).to_byte()
-    buffer[base + 3] = (xtime(a0) ^ a0 ^ a1 ^ a2 ^ xtime(a3)).to_byte()
+    // Each doubled value is needed four times per column, so it is computed
+    // once: the multiply is the most expensive step of the round.
+    let doubled0 = xtime(a0)
+    let doubled1 = xtime(a1)
+    let doubled2 = xtime(a2)
+    let doubled3 = xtime(a3)
+    buffer[base] = (doubled0 ^ (doubled1 ^ a1) ^ a2 ^ a3).to_byte()
+    buffer[base + 1] = (a0 ^ doubled1 ^ (doubled2 ^ a2) ^ a3).to_byte()
+    buffer[base + 2] = (a0 ^ a1 ^ doubled2 ^ (doubled3 ^ a3)).to_byte()
+    buffer[base + 3] = (doubled0 ^ a0 ^ a1 ^ a2 ^ doubled3).to_byte()
     column = column + 1
   }
 }
