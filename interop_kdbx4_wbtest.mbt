@@ -1,0 +1,54 @@
+///|
+/// A real database created with KeePassXC 2.7 on this machine: KDBX 4.0,
+/// AES-256-CBC, Argon2d and gzip. The payload (inner header, XML and protected
+/// values) is byte-for-byte what KeePassXC wrote; only the cost of the key
+/// derivation was lowered so the test suite stays fast. Embedded as hex so the
+/// test needs no filesystem access.
+fn keepassxc_database() -> Bytes {
+  hex_literal(
+    "03d9a29a67fb4bb500000400021000000031c1f2e6bf714350be5805216afc5aff03040000000100000004200000000ec3dac8ed1b3731c418aa01873c47c26750f4e8c75e09a57cfe3b553e97c9970710000000db58d7a34d79d0473037af9bb0ad380c0b8b00000000014205000000245555494410000000ef636ddf8c29444b91f7a9a403e30a0c040100000056040000001300000005010000004908000000010000000000000005010000004d080000000000100000000000040100000050040000000100000042010000005320000000a2f864305fe0548e71756fe9b823315e0510a69c766bfa8fb4326aa4b1694b3e0000040000000d0a0d0a8588cc9abccfb9686208e9ad540854ff9ec7c0e184726c237524ff552582aaf2fd162981bf0dfae4ba54b73a3084e500e4cdf91d05971ab5b6696616c6293b9dc041fd781f1473dfff5fbb99f6a55a8640ab51ab067db31c3c7e5de735a8a85e40070000e326de56f4abe52ff6e14bd0916c1e3b1040915c2a648d2be554d6faf540f1ffafd80c3524cc656840d2dbcbd56be13e5d776fc9ad874928117c3538d5cce7f8e9bcd006b27c07e297da755d97b8b92291e406678c360ee1726d87d01433a8c99d8385fe4058c447b99d75932e815cdcfeccdbe3a54342f997ea09f21ce8a2bfb06d5050449343700d2227e25800e3e692c5b33dddd0f4a1d1bf9dc3a9451166339aa699cdd8182510ce4afcfa2294dc8d7e3a965374f8e61fb826aad7b610e9dad915758a5253ca0c7ae075b3337f8a7a5d002909141ec8b1d6aa6a577efe86a39755a5cca536aa9194c2ef23673b3928a7fd66196766524df47f848faafde925fca69bc4867bec8cb94ecced7c08f63a0388bf9dbea408761a05bb5e9dfc6d2d1c27946af79a08cc9d9e8a2a9d27b0b77869c79bdc5762df38f538dd119ae294b8fb7d004075396010e352da35bd3695c2ff41fd92e1b2fb305e2f137d2a7e8e6f9c624826223ba242bed9c611cb621deb7e7d639bc0de01733c3d87b633f20ff2f1e102c5beae85c823d64a76eb055bbc3be8a6a4b5907ac6c0c82e5d00bb281fca6373319fe515225439b2837404e07305b21a16ebe101640d2cf662742fe1a64d7e57f576a7bf560ebbb20063aa1c48d6e5b86ae2dd768dc5036589e6974f2310710254e7133395598efe080bb80071e65555d942de1c25c4659fd781bc13a33b40680dd6db7676d4ea80e2b779e83828b6ba60ea194f1de2177713f0c5782112b7d21434d3e692c8473d6adb9b447ef8a4e54eb61bfad1e0f0d9034981f8eeaf30a3e8bd4fce82cfa8e5c6af34f43b7b70365bac5a8ed973824ebb0194ba5e59c698ffd3d295814f8a806ef80f388474a6a9092d0df0d0cbe9acfd8908ddc99ad44df733d573faaf637a53fc278598e610f3f37fcb7da308e8797e774baf6a960f59342cfe1bcab973b3296415d34ff8bc5a31b7241b5f54b0e548880cfad37d2bdb6d91496d75e3ec9dca4f257658925aa865d09da231ad4bc12044be31a6a527e21bbd086e470d23ac92483c2cc430fa430efb7e1b47827440f23f5f71dfe1091b849daaa032239308d52fb890345f437c501e097a67007edc7f7febb67a4b8bb63932fe4f48dec97f32c919ffd54b7b0a1330bb20b09c1ab32c323fe450b797d4a6037bb3abd808dce6de703a2b2012bb62805e5b508314d5e45da89a4dcccf926b702329343d3ba30d24ede4383aa6fd614d4857b34c3ab32d2de43c156a3724fd9ca7bfc6e62c11dc996cd9aaedaed3c0e37d9816ebadb296cc4948d5daecd81a78c5c4728d89d94924db2793c52e6f384763cb0dfba01e5dff799a37040830b9e66d9c41b562bb965bbc642190a272d6d68e79d3b81a9f257a27707afe83cb53bca58d9e937bcfd6a4928d7e13bdf8a10a0a40c37b91910de9ab2ecfe9ed4ecc138bf1fb1bbce450407ac11522cc851cab49008801d420079be1699e4695a1f00106a666c2f82fc1a94aac05cae74e9e3a564bd5080eebae02247ac0b9dc7eaf10eb1413bac2226e13579aadc3a5feee1e2c8e0dc0878bb47cc591e512d98a6ca4306223a6d8d389c56e45ac5628cd8385e2ce9478ecd2d82c5872ef8894e3b3b8574694810696bb29aabd3ecfdb478b70b0afd6a0cb0d21d4d7feceeb6db9a60b7cdf52eb136edc89896bb8d925f85a5072932d46436c01724505595e746c1aafce70b6bb0fcec404c2ff293f1ed893e3d86fdf079ba2153d12280e7efd88668e53b4d461fe00608fdfa2e84abc566e51de78b8898b9b4919042989363aa66151c5568b44f8e9c7ca27593637829bfdd6a2ef61264a3dc3c4a2afbf17b9d6cc0846e14f96d33790183c9e401590a0bce2287347b92fd8b81ab40517fe7b891d0c5a742c338d74b1ec34529c8bb9afa0b3e62cad09feb73a7a9418268850f53c6a51561027942485a8d233a151dfc12ea275bb7ca28bc57a2b6e07c53d84cf0720c60db1973cd9db1996f9aba4c5099880a92f4ef7e1954f925c665de570236668c994bbc8c4a93bcdee788c9548354f44a2040a9070d25b9fac94b4a8eae0165e60ad4508e068ac33c0ea24cb065772a4293596cdeca72cd70c3de24df093648740e4e75b772d7348fe15a6fb8c4616b91fb9dd6db2234de7d0a525ea628d8ccf0e2a117ec3a0512f6056a9b14744a4eaa33369471398cde1081345e22517ebbeb981a389650fdabe258dbc7365568aaeac565d455b99fc1004e3b3d3997481e9dbe2c5eb37dc75cb0357390c6ad8141b2bcae49066dcdc16ba3100fde99837df4074fbc0ce020ec5938aabf167a84fae4ad1e4607e7813a80aa409c3aa43dae02fdb5bb386164ead1f1d43196c7eba7d4de5928c60199e3734024a54ded7af21f07ddcd86d7aa2f03db1480db8524bc5f8f9f2f4d5c56fe4473de8f573ee8ecec726d6c956871afeb50cd3f2dedbbb97b5bc161566346c4df95a8ff0f2964c9b768e94431def048bfcf9baf62da91844a09f3539a14d179b76910813b2eb3c671b5ada4243fd7bb1e2bdd69e0c74f531d766468261376a5fe175daa89fdf2eed63f029786a93037b6ad3518273d6519ef240780974c34ebecb571eb4f23d5efb001d52b7f4fc8cdee04c6d4387aed4a127284c3a3e41157fa300000000",
+  )
+}
+
+///|
+/// End to end against the reference implementation: header authentication,
+/// block stream, decryption, gzip, XML, and protected-value decryption. The
+/// expected entries are the ones written in KeePassXC itself.
+test "a real keepassxc database opens end to end" {
+  let key = MasterKey::new().with_password("K@g=UB#*2_84Z._FUO>|")
+  let (header, xml) = open_database(keepassxc_database(), key)
+  let vault = unprotect_vault(parse_vault(utf8_text(xml)), header)
+  let entries = vault.entries()
+  assert_eq(entries.length(), 2)
+  let mail = entries[0].1
+  assert_eq(mail.field("Title"), Some("mail"))
+  assert_eq(mail.field("UserName"), Some("alice@example.com"))
+  assert_eq(mail.field("Password"), Some("s3cret!"))
+  let bank = entries[1].1
+  assert_eq(bank.field("Title"), Some("bank"))
+  assert_eq(bank.field("UserName"), Some("bob"))
+  assert_eq(bank.field("Password"), Some("another-secret"))
+}
+
+///|
+/// The high-level facade used by the CLI must preserve both headers and return
+/// the same authenticated vault as the step-by-step pipeline.
+test "read_database returns headers and a searchable vault" {
+  let key = MasterKey::new().with_password("K@g=UB#*2_84Z._FUO>|")
+  let database = read_database(keepassxc_database(), key)
+  assert_eq(database.outer_header().revision(), "4.0")
+  assert_eq(database.outer_header().cipher().to_text(), "AES-256-CBC")
+  assert_eq(kdf_name(database.outer_header().kdf_parameters()), "Argon2d")
+  assert_eq(database.vault().entry_count(), 2)
+  assert_eq(database.vault().group_count(), 1)
+  let (path, entry) = database.vault().find_entry("mail").unwrap()
+  assert_eq(path, "根群组")
+  assert_eq(entry.field("UserName"), Some("alice@example.com"))
+  let mut password_is_protected = false
+  for field in entry.fields() {
+    if field.key() == "Password" {
+      password_is_protected = field.is_protected()
+    }
+  }
+  assert_true(password_is_protected)
+}

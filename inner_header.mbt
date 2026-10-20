@@ -53,7 +53,10 @@ pub fn InnerHeader::byte_length(self : InnerHeader) -> Int {
 /// Unknown field identifiers are skipped rather than rejected: the format is
 /// explicitly extensible, and a reader that refuses new fields cannot read new
 /// files.
-pub fn split_payload(payload : Bytes) -> (InnerHeader, Bytes) raise KdbxError {
+pub fn split_payload(
+  payload : Bytes,
+  minor : Int,
+) -> (InnerHeader, Bytes) raise KdbxError {
   let reader = ByteReader::new(payload)
   let binaries : Array[Bytes] = []
   let mut random_stream_id : UInt = 0
@@ -62,7 +65,14 @@ pub fn split_payload(payload : Bytes) -> (InnerHeader, Bytes) raise KdbxError {
   while !done {
     let field = reader.read_byte()
     if field == 0 {
-      // The terminator is a lone zero byte, not a zero-sized field.
+      // KDBX 4.1 ends the inner header with a lone zero byte; KDBX 4.0 writes a
+      // full field there (identifier zero plus a zero length).
+      if minor == 0 {
+        let size = reader.read_u32_le()
+        if size != 0 {
+          raise Malformed("inner header terminator carries \{size} bytes")
+        }
+      }
       done = true
     } else {
       let size = reader.read_u32_le().reinterpret_as_int()

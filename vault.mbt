@@ -9,8 +9,8 @@
 pub struct VaultField {
   key : String
   value : String
-  /// True when the value is encrypted with the inner random stream. Decrypting
-  /// it is a separate step (docs/ROADMAP.md, F10b).
+  /// True when the value was protected by the inner random stream. The flag is
+  /// preserved after decryption so reports can redact sensitive fields.
   is_encrypted : Bool
 }
 
@@ -139,6 +139,25 @@ pub fn Vault::entry_count(self : Vault) -> Int {
 }
 
 ///|
+/// Number of groups in the whole vault, including nested groups.
+pub fn Vault::group_count(self : Vault) -> Int {
+  let mut total = 0
+  for group in self.groups {
+    total = total + count_groups(group)
+  }
+  total
+}
+
+///|
+fn count_groups(group : VaultGroup) -> Int {
+  let mut total = 1
+  for child in group.groups {
+    total = total + count_groups(child)
+  }
+  total
+}
+
+///|
 fn count_entries(group : VaultGroup) -> Int {
   let mut total = group.entries.length()
   for child in group.groups {
@@ -155,6 +174,29 @@ pub fn Vault::entries(self : Vault) -> Array[(String, VaultEntry)] {
     collect_entries(group, "", out)
   }
   out
+}
+
+///|
+/// Finds one entry by exact UUID or exact title, returning its group path.
+///
+/// UUIDs are the unambiguous lookup key. Titles are accepted as a convenience,
+/// and the first document-order match wins when titles are duplicated.
+pub fn Vault::find_entry(self : Vault, query : String) -> (String, VaultEntry)? {
+  let all = self.entries()
+  let mut found : (String, VaultEntry)? = None
+  let mut index = 0
+  while index < all.length() && found is None {
+    let (path, entry) = all[index]
+    let title_matches = match entry.field("Title") {
+      Some(title) => title == query
+      None => false
+    }
+    if entry.uuid() == query || title_matches {
+      found = Some((path, entry))
+    }
+    index = index + 1
+  }
+  found
 }
 
 ///|

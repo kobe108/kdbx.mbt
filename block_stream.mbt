@@ -12,6 +12,7 @@
 pub fn read_block_stream(
   data : Bytes,
   hmac_key_base : Bytes,
+  with_index : Bool,
 ) -> Bytes raise KdbxError {
   if hmac_key_base.length() != 64 {
     raise Malformed(
@@ -34,9 +35,15 @@ pub fn read_block_stream(
   let mut done = false
   while !done {
     let stored_tag = reader.read_bytes(32)
-    let block_index = reader.read_u64_le()
-    if block_index != index {
-      raise Malformed("block index \{block_index} where \{index} was expected")
+    // KDBX 4.1 stores the block index explicitly; KDBX 4.0 leaves it implicit
+    // and only authenticates it.
+    if with_index {
+      let block_index = reader.read_u64_le()
+      if block_index != index {
+        raise Malformed(
+          "block index \{block_index} where \{index} was expected",
+        )
+      }
     }
     let size = reader.read_u32_le()
     let payload = reader.read_bytes(size.reinterpret_as_int())

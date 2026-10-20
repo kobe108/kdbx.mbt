@@ -58,9 +58,9 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
 
 | 环节 | 规范允许 | 状态 |
 | --- | --- | --- |
-| KDF | AES-KDF、Argon2d、Argon2id | AES-KDF 已完成；Argon2d/id 待完成 |
+| KDF | AES-KDF、Argon2d、Argon2id | 均已完成 |
 | 外层加密 | AES-256-CBC、ChaCha20 | 均已完成 |
-| 内层随机流 | Salsa20、ChaCha20 | ChaCha20 已完成；Salsa20 待完成 |
+| 内层随机流 | Salsa20、ChaCha20 | 均已完成 |
 | 压缩 | 不压缩、GZip | 已完成 |
 
 验收标准：AES-KDF、Argon2id（KeePassXC 默认）、Argon2d + ChaCha20 三类真实密码库
@@ -72,8 +72,8 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
    输出 Markdown 或 JSON，便于接入 CI。
 2. `export` 子命令：CSV 或 JSON 导出，`--redact` 为默认，不输出明文口令。
 3. KDBX 3.1 只读兼容（另一种格式，不在 4.1 完整读取目标内）。
-5. 写入路径：改写条目后重新加密保存（需要 XML 往返与头部哈希重算）。
-6. 与 CI 集成：把 `audit` 结果作为退出码或 SARIF 报告用于门禁。
+4. 写入路径：改写条目后重新加密保存（需要 XML 往返与头部哈希重算）。
+5. 与 CI 集成：把 `audit` 结果作为退出码或 SARIF 报告用于门禁。
 
 ### 3.3 明确不做
 
@@ -87,12 +87,13 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
 
 - **基础层**：`byteio.mbt`（小端读写与边界检查）、`hex.mbt`、`error.mbt`。
 - **容器层**：`header.mbt`（外层头部）、`variant_dict.mbt`（键值字典）、
-  `key_schedule.mbt`（复合主密钥与 KDF）。
-- **数据层**：`block_stream.mbt`（HMAC 块流）、`cipher.mbt`（AES / ChaCha20）、
-  `xml_model.mbt`（分组与条目模型）。
+  `key_schedule.mbt`（复合主密钥与 KDF）、`header_integrity.mbt`（头部验签）。
+- **数据层**：`block_stream.mbt`（HMAC 块流）、`aes*.mbt` / `cbc.mbt` /
+  `chacha20.mbt`（外层密码）、`payload.mbt`（完整读取入口）。
+- **模型层**：`xml.mbt`、`vault.mbt`、`protected.mbt`（分组、条目与受保护字段）。
 - **产品层**：`audit.mbt`（体检规则）、`report.mbt`（报告渲染）、`export.mbt`（导出）。
-- **入口**：`cmd/kdbx`（命令行工具），只做参数解析与打印，逻辑全部在库里，
-  这样 CLI 行为可以被单元测试覆盖。
+- **入口**：`cmd/kdbx`（命令行工具），只做参数解析、文件 I/O 与打印；
+  认证、解析和查询逻辑在库里，因此库行为可以被单元测试覆盖。
 
 设计约定：
 
@@ -166,10 +167,10 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 | 互操作 | 用真实的 `.kdbx` 文件验证读取结果 | 证明真的能打开别人创建的文件 |
 | 属性测试 | 对头部字段与 VariantDictionary 做随机往返 | 覆盖手写用例想不到的组合 |
 
-**测试数据与许可证**：真实 `.kdbx` 测试文件不随仓库分发（上游测试数据的许可证
-与我们的 Apache-2.0 不一致）。集成测试在本地或 CI 中从上游仓库按固定提交号下载，
-只使用公开的、专门用于测试的库文件。仓库内自带的 fixture 一律由我们自己生成，
-且不含任何真实凭据——这一点对安全类项目尤其重要。
+**测试数据与许可证**：仓库内的规范 fixture 由 `scripts/make_fixture.py` 自行生成。
+真实互操作样本由本项目在 KeePassXC 2.7 中创建，只含虚构条目；提交版降低了 KDF 成本，
+但保留相同载荷，以便测试快速完成。上游仓库的测试文件不随本项目分发。所有样本
+均不含真实凭据。
 
 ## 7. 依赖策略
 
@@ -181,6 +182,8 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 - 已知候选：`cc06b/mooncry`（Apache-2.0，含 AES-CBC、ChaCha20、Argon2、HMAC、SHA-2），
   `moonbit-community/flate`（Apache-2.0，DEFLATE 与 gzip）。
   注意：安装第三方依赖需要本机安装 `git`，因为 `moon update` 依赖它。
+- 当前实际依赖：核心库只依赖 `moonbitlang/core`；命令入口额外使用
+  `moonbitlang/x@0.5.5` 的文件与退出码 API（Apache-2.0）。
 - 所有依赖必须在 README 的依赖与许可表中列出名称、版本、许可证与用途。
 
 ## 8. 里程碑（2026-10-13 到 10-31）
@@ -189,23 +192,23 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 | --- | --- | --- | --- |
 | 0 | 10-13 | 容器骨架落地 | 头部解析、VariantDictionary、测试全绿（已完成） |
 | 1 | 10-14 到 10-16 | 密钥层 | 复合主密钥、AES-KDF、头部 SHA-256 与 HMAC 校验，含向量测试（SHA-256 与 HMAC-SHA-256 已完成） |
-| 2 | 10-17 到 10-19 | 解密路径 | AES-256-CBC、HMAC 块流、inner header、gzip 解压（CBC 与块流已完成，gzip 待做） |
-| 3 | 10-20 到 10-23 | 数据模型与 CLI | XML 转分组与条目模型，`info`、`ls`、`show` |
-| 4 | 10-24 到 10-27 | 互操作与审计 | 真实 `.kdbx` 互操作测试，`audit` 报告（Markdown 与 JSON） |
+| 2 | 10-17 到 10-19 | 解密路径 | AES-256-CBC、HMAC 块流、inner header、gzip 解压（已完成） |
+| 3 | 10-20 到 10-23 | 数据模型与 CLI | XML 转分组与条目模型，`info`、`ls`、`show`（已完成） |
+| 4 | 10-24 到 10-27 | 互操作与审计 | 真实 `.kdbx` 互操作（已完成），`audit` 报告（进行中） |
 | 5 | 10-28 到 10-31 | 收尾与提交 | 文档、演示、边界用例、提交材料（README、测试、许可证） |
 
 ## 9. 风险与对策
 
 | 风险 | 影响 | 对策 |
 | --- | --- | --- |
-| Argon2 实现成本高 | 打不开 KeePass 新版本默认创建的库 | 优先支持 AES-KDF；Argon2 先用生态包，必要时降级为明确报错并给出提示 |
+| Argon2 实现成本高 | 打不开 KeePass 新版本默认创建的库 | 已完成 Argon2d/id，并用 RFC 9106 与 KeePassXC 参数交叉验证 |
 | 第三方包质量不可控 | 静默算错密钥，最难排查 | 用公开测试向量交叉验证；密钥派生单独抽出并有独立测试 |
 | gzip 与 XML 依赖 | 影响能打开的文件范围 | 只实现 KDBX 实际用到的子集；先跑通压缩选项为 none 的文件 |
-| 测试数据许可证 | 可能违反开源合规 | 不分发上游测试文件；CI 按固定提交号下载 |
-| 范围膨胀 | 18 天做不完 | MVP 只保读路径与 `info`、`ls`、`show`；写入与 ChaCha20 明确列为进阶 |
+| 测试数据许可证 | 可能违反开源合规 | 不分发上游测试文件；真实样本自行生成且只含虚构数据 |
+| 范围膨胀 | 18 天做不完 | MVP 先完成读路径、CLI、审计与导出；写入和 KDBX 3.1 列为进阶 |
 | 本机缺少 Git | 无法安装第三方依赖 | README 明确说明；容器层保持零依赖，缺 Git 也能编译与测试 |
 | AES-KDF 性能 | 真实库常用数百万轮 AES 变换，纯 MoonBit 可能耗时过长 | 实测：release 下约 85 万轮/秒（600 万轮约 7 秒，6000 万轮约 70 秒），见 docs/ROADMAP.md；已做掉 ShiftRows 的每轮拷贝，进一步优化需 T 表 |
-| 测试数据来源 | 借用别人的 `.kdbx` 测试文件会带来许可证问题 | fixtures 由仓库内 `scripts/make_fixture.py` 按规范生成，来源可复现；互操作测试再按固定提交号下载上游文件 |
+| 测试数据来源 | 借用别人的 `.kdbx` 测试文件会带来许可证问题 | 规范 fixture 由仓库脚本生成；真实互操作样本自行创建并仅使用虚构条目 |
 
 ## 10. 验收标准对照
 

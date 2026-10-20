@@ -7,6 +7,7 @@ pub fn banner() -> String
 // Errors
 
 // Types and methods
+type CliCommand
 
 // Type aliases
 

@@ -3,7 +3,7 @@
 /// ChaCha20 stream identifier (3), a 64-byte stream key and a terminator,
 /// followed by the XML document.
 test "the inner header of the fixture parses into structure" {
-  let (header, xml) = split_payload(expected_payload())
+  let (header, xml) = split_payload(expected_payload(), 1)
   assert_eq(header.random_stream_id(), 3)
   assert_eq(header.random_stream_key().length(), 64)
   assert_eq(
@@ -20,13 +20,13 @@ test "the inner header of the fixture parses into structure" {
 /// A stream that ends before the terminator, and one whose terminator carries a
 /// payload, are both malformed.
 test "malformed inner headers are reported" {
-  try split_payload(hex_literal("010400000003000000")) catch {
+  try split_payload(hex_literal("010400000003000000"), 1) catch {
     Truncated(_) => ()
     e => fail("expected a Truncated error, got: " + e.message())
   } noraise {
     _ => fail("expected a stream without a terminator to be rejected")
   }
-  try split_payload(hex_literal("0103000000030000")) catch {
+  try split_payload(hex_literal("0103000000030000"), 1) catch {
     Malformed(message) => assert_true(message.contains("4-byte"))
     e => fail("expected a Malformed error, got: " + e.message())
   } noraise {
@@ -40,6 +40,7 @@ test "unknown inner header fields are skipped" {
   // stream id 3, an unknown field 0x7f with three bytes, then the terminator.
   let (header, rest) = split_payload(
     hex_literal("0104000000030000007f03000000aabbcc00"),
+    1,
   )
   assert_eq(header.random_stream_id(), 3)
   assert_eq(rest.length(), 0)

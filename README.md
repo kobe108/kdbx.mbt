@@ -35,11 +35,13 @@
 | 数据层 | inner header 结构化解析（随机流与附件） | 已完成 |
 | 数据层 | gzip 解压（DEFLATE 三种块类型，CRC32 校验） | 已完成 |
 | 数据层 | 外层 ChaCha20（按头部 UUID 分派） | 已完成 |
-| 数据层 | 内层 ChaCha20 随机流（`Protected` 字段） | 已完成 |
-| 数据层 | Salsa20 内层随机流（独立实现的向量验证） | 已完成 |
+| 数据层 | 内层 ChaCha20 / Salsa20 随机流（`Protected` 字段） | 已完成 |
 | 模型层 | XML 解析与金库模型（分组树、条目、字段、保护标志） | 已完成 |
-| 模型层 | `Protected` 字段与内层随机流解密（ChaCha20） | 已完成 |
-| 产品层 | CLI：`info` / `ls` / `show` / `audit` / `export` | 计划中 |
+| 模型层 | `Protected` 字段按文档顺序解密，并保留敏感标记用于脱敏 | 已完成 |
+| 互操作 | KeePassXC 2.7 新建库端到端打开（KDBX 4.0，Argon2d + AES + gzip） | 已完成 |
+| 互操作 | 4.0/4.1 块流布局与内层随机流派生规则 | 已完成 |
+| 产品层 | CLI：`info` / `ls` / `show`（默认脱敏，`--reveal` 显示受保护值） | 已完成 |
+| 产品层 | `audit` 体检与 `export` 导出 | 计划中 |
 
 完整的分层设计、规范出处与到 10 月 31 日的里程碑见
 [docs/DESIGN.md](docs/DESIGN.md)。
@@ -59,8 +61,21 @@
 ```bash
 moon check          # 类型检查
 moon test           # 运行测试
-moon run cmd/kdbx   # 命令行工具（当前打印用法与进度）
+moon run cmd/kdbx   # 查看命令行用法
 ```
+
+命令行从环境变量读取口令，避免密码进入 shell 历史和进程参数：
+
+```bash
+# PowerShell
+$env:KDBX_PASSWORD = "your-master-password"
+moon run cmd/kdbx -- info path/to/database.kdbx
+moon run cmd/kdbx -- ls path/to/database.kdbx
+moon run cmd/kdbx -- show path/to/database.kdbx "entry title"
+moon run cmd/kdbx -- show path/to/database.kdbx "entry title" --reveal
+```
+
+`show` 默认隐藏所有受保护字段；只有显式传入 `--reveal` 才输出明文。
 
 ### 环境要求
 
@@ -68,6 +83,11 @@ moon run cmd/kdbx   # 命令行工具（当前打印用法与进度）
   （Windows 见官方文档），建议 0.1.20260920 或更新版本。
 - **Git**：`moon update` 会用 git 克隆 mooncakes 的 registry 索引，
   因此安装任何第三方依赖都需要本机有 Git。
+
+| 依赖 | 版本 | 许可证 | 用途 |
+| --- | --- | --- | --- |
+| `moonbitlang/core` | 工具链内置 | Apache-2.0 | 字符串、编码与基础运行时 |
+| `moonbitlang/x` | 0.5.5 | Apache-2.0 | 仅命令入口读取文件和返回退出码；核心库仍不依赖它 |
 
 ## 代码示例
 
@@ -97,10 +117,10 @@ for entry in header.kdf_parameters().entries() {
 
 ### 测试数据从哪来
 
-仓库里的 fixtures（例如头部验签用的 271 字节 KDBX 4.1 文件前缀）**由
-[scripts/make_fixture.py](scripts/make_fixture.py) 按规范生成**，不是从别处拷来的二进制，
-来源可复现、许可证干净、不含任何真实凭据。需要与 KeePass / KeePassXC 产出物
-互操作时，测试按固定提交号从上游下载，不随仓库分发。
+仓库里的规范 fixture（例如头部验签用的 271 字节 KDBX 4.1 文件前缀）**由
+[scripts/make_fixture.py](scripts/make_fixture.py) 按规范生成**。真实互操作样本由本项目
+在 KeePassXC 2.7 中自行创建，只含虚构条目；为控制测试时间，提交版降低了 KDF 成本，
+载荷保持不变。上游仓库的测试文件不随本项目分发。
 
 ## 许可证
 

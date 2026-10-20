@@ -1,41 +1,28 @@
-# 互操作测试笔记
+# 互操作测试
 
-这一页记录"用别的实现产出的文件验证自己"时踩到的差异。它们是格式本身的历史
-层次，不是本项目的 bug，但读程序必须知道自己在处理哪一版。
+这里的每一条都是"用别的实现产出的文件验证自己"。它们抓出过两个真实的格式差异，
+所以不只是走过场。
 
-## 已完成的互操作证据
+## 已完成
 
-1. **真实 KeePassXC 文件的头部验签**（`tests/data/Format400.kdbx`，口令取自
-   KeePassXC 的 `TestKdbx4.cpp`）：该文件用 Argon2d + ChaCha20 + gzip。
-   本项目的 Argon2d、复合主密钥、密钥派生与 ChaCha20 IV 处理能够复现它的头部
-   HMAC，测试见 `interop_header_wbtest.mbt`。
-2. **Argon2 与独立实现在真实参数下一致**：取该文件的参数（m = 1 MiB、t = 2、
-   p = 2、Argon2d、版本 0x13）与盐，本项目算出的 tag 与 argon2-cffi 完全相同，
-   测试见 `interop_argon2_wbtest.mbt`。
-3. **端到端 4.1 流程**：由 `scripts/make_fixture.py` 生成的 4.1 fixture 覆盖
-   头部验签、块流、CBC/ChaCha20、gzip、XML 与 `Protected` 字段
-   （`payload_wbtest.mbt`、`open_database_wbtest.mbt`）。
-
-## 已知的版本差异（来自真实文件）
-
-| 特征 | KDBX 4.0 | KDBX 4.1（本项目目标） |
+| 证据 | 内容 | 测试 |
 | --- | --- | --- |
-| HMAC 块流布局 | 块数据在前，MAC 在块尾（pykeepass 的写法） | MAC 在前，随后是索引、长度、密文 |
-| 头部字段长度 | 4 字节 | 4 字节 |
-| 头部认证 | SHA-256 + HMAC-SHA-256 | 同左 |
-| 是否支持 | **不支持**（KDBX 3.1/4.0 明确报错） | 支持 |
+| 真实 KeePassXC 库端到端 | KeePassXC 2.7 新建的库（KDBX 4.0、AES-256-CBC、Argon2d、gzip），正确口令下验签、解密、解压、解析、解密 `Protected` 字段，并核对两条条目 | `interop_kdbx4_wbtest.mbt` |
+| 真实库上的 CLI | 同一测试库通过 `info`、`ls`、`show` 运行；`show` 默认输出脱敏值，`--reveal` 才显示明文 | 本地实机验证 |
+| 真实 KeePassXC 文件头部验签 | `tests/data/Format400.kdbx`（口令取自其 `TestKdbx4.cpp`）：Argon2d + ChaCha20 + gzip | `interop_header_wbtest.mbt` |
+| Argon2 独立实现对齐 | 用真实库的参数（1 MiB、2 轮、2 lane、Argon2d）与盐，结果与 argon2-cffi 逐字节一致 | `interop_argon2_wbtest.mbt` |
+| 4.1 全流程 | 自生成 fixture 覆盖 4.1 块流、CBC/ChaCha20、gzip、XML 与 `Protected` | `payload_wbtest.mbt` 等 |
 
-## 为什么还没有 4.1 的端到端真实库测试
+## 互操作抓出的两个格式差异
 
-- KeePassXC 2.7 的图形界面与 CLI 默认写 **KDBX 3.1**；其仓库自带的测���库也是 3.1。
-- pykeepass 4.2 写 **KDBX 4.0**，块流布局与 4.1 不同。
-- 因此需要一个由 KeePassXC 2.8+（默认 KDBX 4）或 KeePass 2.5x 导出的 4.1 库。
+1. **块流布局**：KDBX 4.0 的块是"标签 + 长度 + 数据"（索引隐含），
+   4.1 是"标签 + 索引 + 长度 + 数据"。读取器按头部次版本号选择布局。
+2. **内层随机流**：密码学输入不是原始密钥字节——ChaCha20 用 `SHA-512(密钥)` 的
+   前 32 字节作 key、随后 12 字节作 nonce；Salsa20 用 `SHA-256(密钥)` 与固定 nonce。
+   直接使用原始密钥会解出"看似合理"的乱码，而不是报错。
 
-## 加入 4.1 样本的步骤
+## 关于测试文件的 KDF 成本
 
-1. 用 KeePassXC 2.8+ 新建一个库（口令、条目随意，不要放真实凭据）；
-2. 记录口令，把文件放到 `work/realkdbx/`；
-3. 运行 `work/gen_interop.py` 的同类脚本，把文件以十六进制嵌入测试
-   （仓库不接收真实凭据，测试数据仅用于本地与 CI）；
-4. 测试断言：`open_database` 成功、条目数与标题/用户名/口令符合预期；
-5. `moon test` 全绿后提交。
+真实库用 Argon2d 64 MiB × 81 轮（KeePassXC 按约 100 ms 解密时间校准）。
+原始文件已在本机端到端验证通过；提交进仓库的样本把 KDF 成本降到 1 MiB / 1 轮，
+**载荷（inner header、XML、受保护字段）保持不变**，以便测试套件在几秒内跑完。

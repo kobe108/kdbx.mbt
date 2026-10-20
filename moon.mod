@@ -6,7 +6,7 @@
 //   moon add moonbitlang/x
 // or declare it manually:
 // import {
-//   "moonbitlang/x@0.4.6",
+//   "moonbitlang/x@0.5.5",
 // }
 
 name = "kobe108/kdbx"
@@ -26,3 +26,7 @@ keywords = [ "keepass", "kdbx", "password-manager", "security", "audit" ]
 preferred_target = "native"
 
 description = "Read, inspect and audit KeePass KDBX databases with MoonBit: a pure container layer with no third-party crypto required."
+
+import {
+  "moonbitlang/x@0.5.5",
+}

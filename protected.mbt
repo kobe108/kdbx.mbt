@@ -31,33 +31,23 @@ pub fn inner_random_stream(
   let key = header.random_stream_key()
   let id = header.random_stream_id()
   match id {
-    3 =>
-      if key.length() < 44 {
-        raise Malformed(
-          "inner random stream key must hold at least 44 bytes, got \{key.length()}",
-        )
-      } else {
-        ChaCha(
-          ChaCha20::new(
-            Bytes::makei(32, fn(i) { key[i] }),
-            Bytes::makei(12, fn(i) { key[32 + i] }),
-            0,
-          ),
-        )
-      }
+    // KeePass derives the cipher inputs from the random key: SHA-512 of the
+    // key gives 32 bytes of key followed by a 12-byte nonce. Using the raw
+    // key bytes instead (as the specification's wording might suggest)
+    // decrypts every protected value to garbage.
+    3 => {
+      let derived = sha512(key)
+      ChaCha(
+        ChaCha20::new(
+          Bytes::makei(32, fn(i) { derived[i] }),
+          Bytes::makei(12, fn(i) { derived[32 + i] }),
+          0,
+        ),
+      )
+    }
     2 =>
-      if key.length() < 40 {
-        raise Malformed(
-          "Salsa20 inner stream key must hold at least 40 bytes, got \{key.length()}",
-        )
-      } else {
-        Salsa(
-          Salsa20::new(
-            Bytes::makei(32, fn(i) { key[i] }),
-            Bytes::makei(8, fn(i) { key[32 + i] }),
-          ),
-        )
-      }
+      // Salsa20 uses SHA-256 of the random key and a fixed nonce.
+      Salsa(Salsa20::new(sha256(key), hex_literal("e830094b97205d2a")))
     _ =>
       raise Unsupported(
         "inner random stream " + id.to_string() + " is not implemented",
@@ -107,7 +97,7 @@ fn unprotect_entry(
     } else {
       field.value()
     }
-    fields.push({ key: field.key(), value, is_encrypted: false, })
+    fields.push({ key: field.key(), value, is_encrypted: field.is_protected(), })
   }
   { uuid: entry.uuid(), fields, }
 }

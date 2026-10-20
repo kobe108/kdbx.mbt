@@ -18,6 +18,24 @@ let kdf_uuid_argon2d : String = "ef636ddf8c29444b91f7a9a403e30a0c"
 let kdf_uuid_argon2id : String = "9e298b1956db4773b23dfc3ec6f0a1e6"
 
 ///|
+/// Human-readable name of the KDF identified by a header dictionary.
+pub fn kdf_name(dict : VariantDict) -> String {
+  let uuid = match dict.get_bytes("$UUID") {
+    Some(value) => to_hex(value)
+    None => return "unknown (missing $UUID)"
+  }
+  if uuid == kdf_uuid_aes {
+    "AES-KDF"
+  } else if uuid == kdf_uuid_argon2d {
+    "Argon2d"
+  } else if uuid == kdf_uuid_argon2id {
+    "Argon2id"
+  } else {
+    "unknown (0x" + uuid + ")"
+  }
+}
+
+///|
 /// The user's credentials, as a list of components concatenated before hashing.
 ///
 /// KeePass accepts a password, a key file, a key provider or a Windows account

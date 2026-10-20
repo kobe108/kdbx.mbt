@@ -4,9 +4,11 @@
 /// very ChaCha20 that the RFC vectors pin, so what is under test here is the
 /// key/nonce convention, the base64 layer and the stream order.
 fn protected_document(key : Bytes) -> String raise KdbxError {
+  // The cipher inputs are derived from the random key, not taken from it.
+  let derived = sha512(key)
   let stream = ChaCha20::new(
-    Bytes::makei(32, fn(i) { key[i] }),
-    Bytes::makei(12, fn(i) { key[32 + i] }),
+    Bytes::makei(32, fn(i) { derived[i] }),
+    Bytes::makei(12, fn(i) { derived[32 + i] }),
     0,
   )
   // Both values come from the same running stream, in this order.
@@ -34,16 +36,19 @@ fn inner_key() -> Bytes {
 
 ///|
 /// An inner header that names ChaCha20 and carries the given key.
-fn inner_header_with(key : Bytes) -> InnerHeader raise KdbxError {
+fn inner_header_with(
+  key : Bytes,
+  stream_id : UInt,
+) -> InnerHeader raise KdbxError {
   let payload = ByteWriter::new()
   payload.write_byte(1)
   payload.write_u32_le(4)
-  payload.write_u32_le(3)
+  payload.write_u32_le(stream_id)
   payload.write_byte(2)
   payload.write_u32_le(key.length().reinterpret_as_uint())
   payload.write_bytes(key)
   payload.write_byte(0)
-  split_payload(payload.to_bytes()).0
+  split_payload(payload.to_bytes(), 1).0
 }
 
 ///|
@@ -53,26 +58,25 @@ test "protected fields decrypt with the shared stream" {
   let key = inner_key()
   let vault = parse_vault(protected_document(key))
   assert_true(vault.entries()[0].1.fields()[1].is_protected())
-  let opened = unprotect_vault(vault, inner_header_with(key))
+  let opened = unprotect_vault(vault, inner_header_with(key, 3))
   let fields = opened.entries()[0].1.fields()
   assert_eq(fields[0].value(), "Plain")
   assert_eq(fields[1].value(), "hunter2")
   assert_eq(fields[2].value(), "second secret")
   // The flag is cleared once the value really is plaintext.
-  assert_true(!fields[1].is_protected())
+  // Decryption must not erase the sensitivity marker: a CLI that prints every
+  // field by default would otherwise leak the password it just decrypted.
+  assert_true(fields[1].is_protected())
 }
 
 ///|
-/// A key that is too short to feed the cipher must be refused rather than
-/// producing garbage.
+/// A stream this build does not implement must be refused with a clear message.
 test "unsupported inner streams are refused" {
   let vault = parse_vault(protected_document(inner_key()))
-  try
-    unprotect_vault(vault, inner_header_with(sequence_bytes(16, 1, 0)))
-  catch {
-    Malformed(message) => assert_true(message.contains("44 bytes"))
-    e => fail("expected a key length error, got: " + e.message())
+  try unprotect_vault(vault, inner_header_with(inner_key(), 9)) catch {
+    Unsupported(message) => assert_true(message.contains("9"))
+    e => fail("expected an unsupported error, got: " + e.message())
   } noraise {
-    _ => fail("expected a short inner key to be refused")
+    _ => fail("expected an unknown inner stream to be refused")
   }
 }

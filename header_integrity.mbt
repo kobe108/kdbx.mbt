@@ -45,6 +45,7 @@ pub struct OpenedHeader {
   verification : HeaderVerification
   iv : Bytes
   header_length : Int
+  minor : Int
   encryption_key : Bytes
   hmac_key_base : Bytes
 }
@@ -75,6 +76,12 @@ pub fn OpenedHeader::header_length(self : OpenedHeader) -> Int {
 }
 
 ///|
+/// Minor format version: 0 for KDBX 4.0, 1 for 4.1. It decides the block layout.
+pub fn OpenedHeader::minor(self : OpenedHeader) -> Int {
+  self.minor
+}
+
+///|
 pub fn OpenedHeader::encryption_key(self : OpenedHeader) -> Bytes {
   self.encryption_key
 }
@@ -96,6 +103,20 @@ pub fn open_header(
   key : MasterKey,
 ) -> OpenedHeader raise KdbxError {
   let header = parse_outer_header(data)
+  open_header_with_outer(data, header, key)
+}
+
+///|
+/// Opens a header whose outer structure has already been parsed.
+///
+/// The full database path needs the outer header for reporting and the opened
+/// header for decryption. Reusing the parsed value avoids walking the same
+/// fields twice while keeping `open_header` as the simple public entry point.
+fn open_header_with_outer(
+  data : Bytes,
+  header : OuterHeader,
+  key : MasterKey,
+) -> OpenedHeader raise KdbxError {
   let header_bytes = read_range(data, 0, header.byte_length())
   let stored_hash = read_range(data, header.byte_length(), 32)
   if !constant_time_equal(sha256(header_bytes), stored_hash) {
@@ -126,6 +147,7 @@ pub fn open_header(
     },
     iv: header.encryption_iv(),
     header_length: header.byte_length(),
+    minor: header.minor(),
     encryption_key: derive_encryption_key(master_seed, transformed),
     hmac_key_base: base,
   }

@@ -2,11 +2,25 @@
 package "kobe108/kdbx"
 
 // Values
+pub fn aes256_cbc_decrypt(Bytes, Bytes, Bytes) -> Bytes raise KdbxError
+
 pub fn aes_kdf_from_parameters(VariantDict) -> AesKdf raise KdbxError
+
+pub fn argon2_digest(Argon2Params, Bytes) -> Bytes raise KdbxError
+
+pub fn argon2_from_parameters(VariantDict, Argon2Kind) -> Argon2Kdf raise KdbxError
+
+pub fn argon2i_kind() -> Argon2Kind
 
 pub fn banner() -> String
 
+pub fn blake2b(Bytes, Int) -> Bytes raise KdbxError
+
+pub fn build_inverse_sbox() -> Array[Byte]
+
 pub fn bytes_from_hex(String) -> Bytes raise KdbxError
+
+pub fn chacha20_decrypt(Bytes, Bytes, Bytes) -> Bytes raise KdbxError
 
 pub fn cipher_field_id() -> UInt
 
@@ -14,7 +28,11 @@ pub fn concat_bytes(Bytes, Bytes) -> Bytes
 
 pub fn constant_time_equal(Bytes, Bytes) -> Bool
 
+pub fn crc32(Bytes) -> UInt
+
 pub fn decode_variant_dict(Bytes) -> VariantDict raise KdbxError
+
+pub fn decrypt_payload(Bytes, MasterKey) -> Bytes raise KdbxError
 
 pub fn derive_block_hmac_key(Bytes, UInt64) -> Bytes raise KdbxError
 
@@ -36,9 +54,21 @@ pub let field_master_seed : UInt
 
 pub let field_public_custom_data : UInt
 
+pub fn gunzip(Bytes) -> Bytes raise KdbxError
+
 pub fn hex_literal(String) -> Bytes
 
 pub fn hmac_sha256(Bytes, Bytes) -> Bytes
+
+pub fn inflate(Bytes, Int) -> (Bytes, Int) raise KdbxError
+
+pub let inner_field_binary : UInt
+
+pub let inner_field_stream_id : UInt
+
+pub let inner_field_stream_key : UInt
+
+pub fn inner_random_stream(InnerHeader) -> RandomStream raise KdbxError
 
 pub let kdbx_end_of_header_value : String
 
@@ -46,13 +76,35 @@ pub let kdbx_signature1 : UInt
 
 pub let kdbx_signature2 : UInt
 
+pub fn kdf_name(VariantDict) -> String
+
+pub fn open_database(Bytes, MasterKey) -> (InnerHeader, Bytes) raise KdbxError
+
+pub fn open_header(Bytes, MasterKey) -> OpenedHeader raise KdbxError
+
 pub fn parse_outer_header(Bytes) -> OuterHeader raise KdbxError
+
+pub fn parse_vault(String) -> Vault raise KdbxError
+
+pub fn parse_xml(String) -> XmlElement raise KdbxError
+
+pub fn read_block_stream(Bytes, Bytes, Bool) -> Bytes raise KdbxError
+
+pub fn read_database(Bytes, MasterKey) -> OpenedDatabase raise KdbxError
 
 pub fn sha256(Bytes) -> Bytes
 
 pub fn sha512(Bytes) -> Bytes
 
+pub fn split_payload(Bytes, Int) -> (InnerHeader, Bytes) raise KdbxError
+
 pub fn to_hex(Bytes, limit? : Int) -> String
+
+pub fn transform_with_kdf(VariantDict, Bytes) -> Bytes raise KdbxError
+
+pub fn unpad_pkcs7(Bytes) -> Bytes raise KdbxError
+
+pub fn unprotect_vault(Vault, InnerHeader) -> Vault raise KdbxError
 
 pub fn verify_header(Bytes, MasterKey) -> HeaderVerification raise KdbxError
 
@@ -72,7 +124,15 @@ pub struct Aes256 {
 }
 pub fn Aes256::encrypt_block(Self, Bytes) -> Bytes raise KdbxError
 pub fn Aes256::encrypt_in_place(Self, Array[Byte], Int) -> Unit raise KdbxError
+pub fn Aes256::encrypt_two_blocks_in_place(Self, Array[Byte]) -> Unit raise KdbxError
 pub fn Aes256::new(Bytes) -> Self raise KdbxError
+
+pub struct Aes256Decrypt {
+  round_keys : Array[Byte]
+  inverse_sbox : Array[Byte]
+}
+pub fn Aes256Decrypt::decrypt_in_place(Self, Array[Byte], Int) -> Unit raise KdbxError
+pub fn Aes256Decrypt::new(Bytes) -> Self raise KdbxError
 
 pub struct AesKdf {
   seed : Bytes
@@ -80,6 +140,29 @@ pub struct AesKdf {
 }
 pub fn AesKdf::rounds(Self) -> UInt64
 pub fn AesKdf::transform(Self, Bytes) -> Bytes raise KdbxError
+
+pub struct Argon2Kdf {
+  params : Argon2Params
+}
+pub fn Argon2Kdf::transform(Self, Bytes) -> Bytes raise KdbxError
+
+pub enum Argon2Kind {
+  Argon2d
+  Argon2i
+  Argon2id
+}
+
+pub struct Argon2Params {
+  salt : Bytes
+  secret : Bytes
+  associated_data : Bytes
+  iterations : UInt
+  memory_kib : UInt
+  lanes : UInt
+  tag_length : Int
+  version : UInt
+  kind : Argon2Kind
+}
 
 pub struct ByteReader {
   data : Bytes
@@ -115,6 +198,14 @@ pub fn ByteWriter::write_u64_be(Self, UInt64) -> Unit
 pub fn ByteWriter::write_u64_le(Self, UInt64) -> Unit
 pub fn ByteWriter::write_uint_le(Self, UInt64, Int) -> Unit
 
+pub struct ChaCha20 {
+  state : Array[UInt]
+  mut keystream : Array[Byte]
+  mut used : Int
+}
+pub fn ChaCha20::apply(Self, Bytes) -> Bytes
+pub fn ChaCha20::new(Bytes, Bytes, UInt) -> Self raise KdbxError
+
 pub enum Cipher {
   Aes256Cbc
   ChaCha20
@@ -142,6 +233,17 @@ pub fn HeaderVerification::compression(Self) -> Compression
 pub fn HeaderVerification::kdf_rounds(Self) -> UInt64
 pub fn HeaderVerification::revision(Self) -> String
 
+pub struct InnerHeader {
+  random_stream_id : UInt
+  random_stream_key : Bytes
+  binaries : Array[Bytes]
+  byte_length : Int
+}
+pub fn InnerHeader::binaries(Self) -> Array[Bytes]
+pub fn InnerHeader::byte_length(Self) -> Int
+pub fn InnerHeader::random_stream_id(Self) -> UInt
+pub fn InnerHeader::random_stream_key(Self) -> Bytes
+
 pub struct MasterKey {
   components : Array[Bytes]
 }
@@ -150,6 +252,36 @@ pub fn MasterKey::composite(Self) -> Bytes raise KdbxError
 pub fn MasterKey::new() -> Self
 pub fn MasterKey::with_component(Self, Bytes) -> Self
 pub fn MasterKey::with_password(Self, String) -> Self
+
+pub struct OpenedDatabase {
+  outer_header : OuterHeader
+  verification : HeaderVerification
+  kdf_parameters : VariantDict
+  inner_header : InnerHeader
+  vault : Vault
+}
+pub fn OpenedDatabase::inner_header(Self) -> InnerHeader
+pub fn OpenedDatabase::kdf_parameters(Self) -> VariantDict
+pub fn OpenedDatabase::outer_header(Self) -> OuterHeader
+pub fn OpenedDatabase::vault(Self) -> Vault
+pub fn OpenedDatabase::verification(Self) -> HeaderVerification
+
+pub struct OpenedHeader {
+  verification : HeaderVerification
+  iv : Bytes
+  header_length : Int
+  minor : Int
+  encryption_key : Bytes
+  hmac_key_base : Bytes
+}
+pub fn OpenedHeader::cipher(Self) -> Cipher
+pub fn OpenedHeader::compression(Self) -> Compression
+pub fn OpenedHeader::encryption_key(Self) -> Bytes
+pub fn OpenedHeader::header_length(Self) -> Int
+pub fn OpenedHeader::hmac_key_base(Self) -> Bytes
+pub fn OpenedHeader::iv(Self) -> Bytes
+pub fn OpenedHeader::minor(Self) -> Int
+pub fn OpenedHeader::verification(Self) -> HeaderVerification
 
 pub struct OuterHeader {
   version : UInt
@@ -168,6 +300,20 @@ pub fn OuterHeader::major(Self) -> Int
 pub fn OuterHeader::master_seed(Self) -> Bytes raise KdbxError
 pub fn OuterHeader::minor(Self) -> Int
 pub fn OuterHeader::revision(Self) -> String
+
+pub enum RandomStream {
+  ChaCha(ChaCha20)
+  Salsa(Salsa20)
+}
+pub fn RandomStream::apply(Self, Bytes) -> Bytes
+
+pub struct Salsa20 {
+  state : Array[UInt]
+  mut keystream : Array[Byte]
+  mut used : Int
+}
+pub fn Salsa20::apply(Self, Bytes) -> Bytes
+pub fn Salsa20::new(Bytes, Bytes) -> Self raise KdbxError
 
 pub struct VariantDict {
   entries : Array[(String, VariantValue)]
@@ -192,6 +338,59 @@ pub enum VariantValue {
   VBytes(Bytes)
 }
 pub fn VariantValue::to_text(Self) -> String
+
+pub struct Vault {
+  groups : Array[VaultGroup]
+  generator : String
+}
+pub fn Vault::entries(Self) -> Array[(String, VaultEntry)]
+pub fn Vault::entry_count(Self) -> Int
+pub fn Vault::find_entry(Self, String) -> (String, VaultEntry)?
+pub fn Vault::generator(Self) -> String
+pub fn Vault::group_count(Self) -> Int
+pub fn Vault::groups(Self) -> Array[VaultGroup]
+
+pub struct VaultEntry {
+  uuid : String
+  fields : Array[VaultField]
+}
+pub fn VaultEntry::field(Self, String) -> String?
+pub fn VaultEntry::fields(Self) -> Array[VaultField]
+pub fn VaultEntry::uuid(Self) -> String
+
+pub struct VaultField {
+  key : String
+  value : String
+  is_encrypted : Bool
+}
+pub fn VaultField::is_protected(Self) -> Bool
+pub fn VaultField::key(Self) -> String
+pub fn VaultField::value(Self) -> String
+
+pub struct VaultGroup {
+  name : String
+  uuid : String
+  groups : Array[VaultGroup]
+  entries : Array[VaultEntry]
+}
+pub fn VaultGroup::entries(Self) -> Array[VaultEntry]
+pub fn VaultGroup::groups(Self) -> Array[Self]
+pub fn VaultGroup::name(Self) -> String
+pub fn VaultGroup::uuid(Self) -> String
+
+pub struct XmlElement {
+  name : String
+  attributes : Array[(String, String)]
+  children : Array[XmlElement]
+  text : String
+}
+pub fn XmlElement::attribute(Self, String) -> String?
+pub fn XmlElement::child(Self, String) -> Self?
+pub fn XmlElement::child_text(Self, String) -> String
+pub fn XmlElement::children(Self) -> Array[Self]
+pub fn XmlElement::children_named(Self, String) -> Array[Self]
+pub fn XmlElement::name(Self) -> String
+pub fn XmlElement::text(Self) -> String
 
 // Type aliases
 

@@ -14,6 +14,16 @@ pub enum Argon2Kind {
 }
 
 ///|
+/// Argon2i's selector.
+///
+/// KDBX uses Argon2d and Argon2id, but `argon2_digest` implements all three RFC
+/// 9106 modes. This accessor keeps the complete primitive usable as a library
+/// API without widening the password-database format claim.
+pub fn argon2i_kind() -> Argon2Kind {
+  Argon2i
+}
+
+///|
 /// Everything Argon2 needs apart from the password.
 pub struct Argon2Params {
   salt : Bytes
