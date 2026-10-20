@@ -1,4 +1,21 @@
 ///|
+/// The outer cipher path: a 32-byte key, the 12-byte nonce from the header and
+/// counter zero, streamed over the whole payload.
+test "outer chacha20 round-trips and validates its nonce" {
+  let key = sequence_bytes(32, 7, 3)
+  let nonce = sequence_bytes(12, 5, 1)
+  let plaintext = ascii_bytes("payload for the outer ChaCha20 path")
+  let ciphertext = ChaCha20::new(key, nonce, 0).apply(plaintext)
+  assert_eq(to_hex(chacha20_decrypt(key, nonce, ciphertext)), to_hex(plaintext))
+  try chacha20_decrypt(key, sequence_bytes(8, 1, 0), ciphertext) catch {
+    Malformed(message) => assert_true(message.contains("12-byte IV"))
+    e => fail("expected an IV length error, got: " + e.message())
+  } noraise {
+    _ => fail("expected an 8-byte nonce to be refused")
+  }
+}
+
+///|
 /// A zero-filled buffer of `count` bytes, used to read raw keystream.
 fn zeros(count : Int) -> Bytes {
   let out = ByteWriter::new()

@@ -52,13 +52,26 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
 - CLI：`info`、`ls`、`show`。
 - 测试：规范向量、畸形输入、真实文件互操作。
 
+### 3.1b 完整 KDBX 4.1 读取目标（必达）
+
+初审意见要求把"完整读取"作为项目终点，因此以下能力由"可选进阶"提升为**必达目标**：
+
+| 环节 | 规范允许 | 状态 |
+| --- | --- | --- |
+| KDF | AES-KDF、Argon2d、Argon2id | AES-KDF 已完成；Argon2d/id 待完成 |
+| 外层加密 | AES-256-CBC、ChaCha20 | 均已完成 |
+| 内层随机流 | Salsa20、ChaCha20 | ChaCha20 已完成；Salsa20 待完成 |
+| 压缩 | 不压缩、GZip | 已完成 |
+
+验收标准：AES-KDF、Argon2id（KeePassXC 默认）、Argon2d + ChaCha20 三类真实密码库
+都能在正确口令下打开并列出全部分组与条目。
+
 ### 3.2 进阶（有余力再做，按优先级排序）
 
 1. `audit` 子命令：弱口令、重复使用、过期、长期未更换、缺少 TOTP 的报告，
    输出 Markdown 或 JSON，便于接入 CI。
 2. `export` 子命令：CSV 或 JSON 导出，`--redact` 为默认，不输出明文口令。
-3. KDBX 4.1 搭配 ChaCha20；KDBX 3.1 只读兼容。
-4. Argon2d / Argon2id（KeePass 2.35+ 的默认 KDF，代价较高，见风险表）。
+3. KDBX 3.1 只读兼容（另一种格式，不在 4.1 完整读取目标内）。
 5. 写入路径：改写条目后重新加密保存（需要 XML 往返与头部哈希重算）。
 6. 与 CI 集成：把 `audit` 结果作为退出码或 SARIF 报告用于门禁。
 
