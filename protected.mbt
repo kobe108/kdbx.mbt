@@ -11,26 +11,58 @@
 /// KDBX 4 names either Salsa20 (id 2) or ChaCha20 (id 3). The key material is 64
 /// bytes, of which the cipher takes 32 bytes of key and the next 12 as nonce,
 /// starting at counter zero.
-pub fn inner_random_stream(header : InnerHeader) -> ChaCha20 raise KdbxError {
+pub enum RandomStream {
+  ChaCha(ChaCha20)
+  Salsa(Salsa20)
+}
+
+///|
+pub fn RandomStream::apply(self : RandomStream, data : Bytes) -> Bytes {
+  match self {
+    ChaCha(stream) => stream.apply(data)
+    Salsa(stream) => stream.apply(data)
+  }
+}
+
+///|
+pub fn inner_random_stream(
+  header : InnerHeader,
+) -> RandomStream raise KdbxError {
   let key = header.random_stream_key()
   let id = header.random_stream_id()
-  if id != 3 {
-    raise Unsupported(
-      "inner random stream " +
-      id.to_string() +
-      " is not implemented yet (only ChaCha20, id 3)",
-    )
+  match id {
+    3 =>
+      if key.length() < 44 {
+        raise Malformed(
+          "inner random stream key must hold at least 44 bytes, got \{key.length()}",
+        )
+      } else {
+        ChaCha(
+          ChaCha20::new(
+            Bytes::makei(32, fn(i) { key[i] }),
+            Bytes::makei(12, fn(i) { key[32 + i] }),
+            0,
+          ),
+        )
+      }
+    2 =>
+      if key.length() < 40 {
+        raise Malformed(
+          "Salsa20 inner stream key must hold at least 40 bytes, got \{key.length()}",
+        )
+      } else {
+        Salsa(
+          Salsa20::new(
+            Bytes::makei(32, fn(i) { key[i] }),
+            Bytes::makei(8, fn(i) { key[32 + i] }),
+          ),
+        )
+      }
+    _ =>
+      raise Unsupported(
+        "inner random stream " + id.to_string() + " is not implemented",
+      )
   }
-  if key.length() < 44 {
-    raise Malformed(
-      "inner random stream key must hold at least 44 bytes, got \{key.length()}",
-    )
-  }
-  ChaCha20::new(
-    Bytes::makei(32, fn(i) { key[i] }),
-    Bytes::makei(12, fn(i) { key[32 + i] }),
-    0,
-  )
 }
 
 ///|
@@ -50,7 +82,7 @@ pub fn unprotect_vault(
 ///|
 fn unprotect_group(
   group : VaultGroup,
-  stream : ChaCha20,
+  stream : RandomStream,
 ) -> VaultGroup raise KdbxError {
   let entries : Array[VaultEntry] = []
   for entry in group.entries() {
@@ -66,7 +98,7 @@ fn unprotect_group(
 ///|
 fn unprotect_entry(
   entry : VaultEntry,
-  stream : ChaCha20,
+  stream : RandomStream,
 ) -> VaultEntry raise KdbxError {
   let fields : Array[VaultField] = []
   for field in entry.fields() {
