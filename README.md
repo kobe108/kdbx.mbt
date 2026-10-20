@@ -29,7 +29,7 @@
 | 密码学 | SHA-256、SHA-512 与 HMAC-SHA-256（FIPS 180-4 / RFC 4231 官方向量验证） | 已完成 |
 | 密码学 | AES-256 分组加密（FIPS-197 用例 + 独立实现交叉验证，加密方向） | 已完成 |
 | 密钥层 | 复合主密钥、AES-KDF 与加密密钥/HMAC 密钥派生 | 已完成 |
-| 密钥层 | Argon2d / Argon2id（KeePassXC 默认 KDF，必达） | 进行中 |
+| 密钥层 | Argon2d / Argon2id（RFC 9106 向量通过，KeePassXC 默认 KDF） | 已完成 |
 | 密钥层 | 头部 SHA-256 与 HMAC-SHA-256 校验（含篡改与截断检测） | 已完成 |
 | 数据层 | HMAC 块流校验、AES-256-CBC 解密、PKCS#7 去填充 | 已完成 |
 | 数据层 | inner header 结构化解析（随机流与附件） | 已完成 |

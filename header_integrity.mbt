@@ -101,8 +101,12 @@ pub fn open_header(
   if !constant_time_equal(sha256(header_bytes), stored_hash) {
     raise Malformed("header hash mismatch: the file is corrupted")
   }
-  let kdf = aes_kdf_from_parameters(header.kdf_parameters())
-  let transformed = kdf.transform(key.composite())
+  let kdf = header.kdf_parameters()
+  let transformed = transform_with_kdf(kdf, key.composite())
+  let rounds = match kdf.get_uint64("R") {
+    Some(value) => value
+    None => 0UL
+  }
   let master_seed = header.master_seed()
   let base = derive_hmac_key_base(master_seed, transformed)
   let header_key = derive_header_hmac_key(base)
@@ -118,7 +122,7 @@ pub fn open_header(
       revision: header.revision(),
       cipher,
       compression: header.compression(),
-      kdf_rounds: kdf.rounds(),
+      kdf_rounds: rounds,
     },
     iv: header.encryption_iv(),
     header_length: header.byte_length(),

@@ -93,6 +93,96 @@ pub struct AesKdf {
 }
 
 ///|
+/// Argon2 parameters in the form KDBX stores them, ready to transform the
+/// composite key.
+pub struct Argon2Kdf {
+  params : Argon2Params
+}
+
+///|
+/// Reads Argon2 parameters out of a header variant dictionary.
+///
+/// KeePass stores the memory size in **bytes**, while RFC 9106 counts KiB, so
+/// the conversion happens here, once, with the lower bound checked first.
+pub fn argon2_from_parameters(
+  dict : VariantDict,
+  kind : Argon2Kind,
+) -> Argon2Kdf raise KdbxError {
+  let version = match dict.get_uint32("V") {
+    Some(value) => value
+    None => 0x13
+  }
+  let iterations = match dict.get_uint64("I") {
+    Some(value) => value
+    None => raise Malformed("Argon2 parameters have no I (iterations)")
+  }
+  let memory_bytes = match dict.get_uint64("M") {
+    Some(value) => value
+    None => raise Malformed("Argon2 parameters have no M (memory size)")
+  }
+  let lanes = match dict.get_uint32("P") {
+    Some(value) => value
+    None => raise Malformed("Argon2 parameters have no P (parallelism)")
+  }
+  let salt = match dict.get_bytes("S") {
+    Some(value) => value
+    None => raise Malformed("Argon2 parameters have no S (salt)")
+  }
+  if memory_bytes < 8192 {
+    raise Malformed("Argon2 memory must be at least 8192 bytes")
+  }
+  if iterations > 0xFFFFFFFFUL {
+    raise Malformed("Argon2 iterations do not fit in 32 bits")
+  }
+  {
+    params: {
+      salt,
+      secret: Bytes::makei(0, fn(_) { 0 }),
+      associated_data: Bytes::makei(0, fn(_) { 0 }),
+      iterations: iterations.to_uint(),
+      memory_kib: (memory_bytes / 1024UL).to_uint(),
+      lanes,
+      tag_length: 32,
+      version,
+      kind,
+    },
+  }
+}
+
+///|
+pub fn Argon2Kdf::transform(
+  self : Argon2Kdf,
+  composite : Bytes,
+) -> Bytes raise KdbxError {
+  argon2_digest(self.params, composite)
+}
+
+///|
+/// Transforms the composite key with whichever KDF the header names.
+///
+/// This is the compatibility point of the whole project: AES-KDF, Argon2d and
+/// Argon2id are all required, so only an unknown identifier is unsupported.
+pub fn transform_with_kdf(
+  dict : VariantDict,
+  composite : Bytes,
+) -> Bytes raise KdbxError {
+  let uuid = match dict.get_bytes("$UUID") {
+    Some(value) => to_hex(value)
+    None => raise Malformed("KDF parameters have no $UUID")
+  }
+  if uuid == kdf_uuid_aes {
+    return aes_kdf_from_parameters(dict).transform(composite)
+  }
+  if uuid == kdf_uuid_argon2d {
+    return argon2_from_parameters(dict, Argon2d).transform(composite)
+  }
+  if uuid == kdf_uuid_argon2id {
+    return argon2_from_parameters(dict, Argon2id).transform(composite)
+  }
+  raise Unsupported("unknown key derivation function 0x" + uuid)
+}
+
+///|
 /// Reads the AES-KDF parameters out of a header variant dictionary.
 ///
 /// Unsupported functions are reported as such: the caller learns that the file

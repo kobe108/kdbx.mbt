@@ -17,7 +17,7 @@ test "outer chacha20 round-trips and validates its nonce" {
 
 ///|
 /// A zero-filled buffer of `count` bytes, used to read raw keystream.
-fn zeros(count : Int) -> Bytes {
+fn zero_bytes_of(count : Int) -> Bytes {
   let out = ByteWriter::new()
   let mut i = 0
   while i < count {
@@ -35,7 +35,7 @@ test "chacha20 matches the rfc 8439 block vector" {
   let nonce = hex_literal("000000090000004a00000000")
   let stream = ChaCha20::new(key, nonce, 1)
   // 64 bytes of keystream is one block; a 65th byte would start the next.
-  let block = stream.apply(zeros(64))
+  let block = stream.apply(zero_bytes_of(64))
   assert_eq(
     to_hex(block),
     "10f1e7e4d13b5915500fdd1fa32071c4c7d1f4c733c068030422aa9ac3d46c4ed2826446079faa0914c2d705d98b02a2b5129cd1de164eb9cbd083e8a2503c4e",
