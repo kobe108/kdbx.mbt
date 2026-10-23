@@ -39,6 +39,7 @@
 | 模型层 | XML 解析与金库模型（分组树、条目、字段、保护标志） | 已完成 |
 | 模型层 | `Protected` 字段按文档顺序解密，并保留敏感标记用于脱敏 | 已完成 |
 | 互操作 | KeePassXC 2.7 新建库端到端打开（KDBX 4.0，Argon2d + AES + gzip） | 已完成 |
+| 互操作 | pykeepass 生成库端到端打开（Argon2id + AES、Argon2d + ChaCha20） | 已完成 |
 | 互操作 | 4.0/4.1 块流布局与内层随机流派生规则 | 已完成 |
 | 产品层 | CLI：`info` / `ls` / `show`（默认脱敏，`--reveal` 显示受保护值） | 已完成 |
 | 产品层 | `audit`：弱口令、重复、过期、长期未更换，支持 Markdown/JSON 与 CI 门禁 | 已完成 |
@@ -94,7 +95,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo.ps1
 sh scripts/demo.sh
 ```
 
-脚本依次运行 `info`、四类风险审计、JSON CI 门禁和脱敏导出，不要求准备自己的密码库。
+脚本依次运行 `info`、四类风险审计、JSON CI 门禁、脱敏导出，并打开
+`pykeepass` 生成的真实 Argon2id+AES 与 Argon2d+ChaCha20 互操作库。
 
 ### 环境要求
 

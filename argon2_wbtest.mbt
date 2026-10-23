@@ -70,6 +70,34 @@ test "argon2 matches the rfc 9106 vectors" {
 }
 
 ///|
+/// Cross-check Argon2id against a database written by pykeepass. This is the
+/// real-header parameter set that the RFC vectors alone did not cover: 1 MiB,
+/// one pass, one lane and a 32-byte salt.
+test "argon2id matches real kdbx parameters" {
+  let dict = VariantDict::new()
+  dict.set("$UUID", VBytes(hex_literal("9e298b1956db4773b23dfc3ec6f0a1e6")))
+  dict.set("V", VUInt32(0x13))
+  dict.set("I", VUInt64(1))
+  dict.set("M", VUInt64(1048576))
+  dict.set("P", VUInt32(1))
+  dict.set(
+    "S",
+    VBytes(
+      hex_literal(
+        "deed43296e18b301fa23210292049ec02e1102510b6e172b183136fb4a59a08a",
+      ),
+    ),
+  )
+  let composite = hex_literal(
+    "8a89836051fdc07b0657c46a4c3e37b7be1ccfefe298fe64413154696210892e",
+  )
+  assert_eq(
+    to_hex(transform_with_kdf(dict, composite)),
+    "d8aff534a02e81ef312a5503b43b458df011653effbd3264ffeadc2a7c6e7d34",
+  )
+}
+
+///|
 /// Parameter validation: the way a wrong header becomes a clear error rather
 /// than a silent wrong key.
 test "argon2 rejects impossible parameters" {

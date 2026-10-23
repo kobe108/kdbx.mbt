@@ -147,6 +147,20 @@ pub fn argon2_digest(
         }
         let starting = if pass == 0 && slice == 0 { 2 } else { 0 }
         let tmp = zeros(128)
+        // RFC 9106 initializes an address block before a first slice that
+        // starts at index 2. Without this, Argon2i/Argon2id would read zeros
+        // for the first 126 blocks; the tiny RFC vectors skip this branch.
+        if independent && starting > 0 {
+          input[6] = input[6] + 1
+          let zero = zeros(128)
+          argon2_compress(zero, input, address, scratch)
+          argon2_compress(zero, address, tmp, scratch)
+          let mut word = 0
+          while word < 128 {
+            address[word] = tmp[word]
+            word = word + 1
+          }
+        }
         let mut index = starting
         while index < segment_length {
           let current = lane * lane_length + slice * segment_length + index

@@ -25,3 +25,20 @@ fi
 
 printf "\n== export (passwords redacted) ==\n"
 moon run cmd/kdbx -- export "$database" --format json
+
+export KDBX_PASSWORD='Interop-2026!Strong'
+check_case() {
+  file=$1
+  kdf=$2
+  cipher=$3
+  title=$4
+  printf "\n== interop: %s + %s ==\n" "$kdf" "$cipher"
+  info=$(moon run cmd/kdbx -- info "$file")
+  printf "%s\n" "$info" | grep -F "KDF: $kdf" >/dev/null
+  printf "%s\n" "$info" | grep -F "Cipher: $cipher" >/dev/null
+  shown=$(moon run cmd/kdbx -- show "$file" "$title")
+  printf "%s\n" "$shown" | grep -F "Title: $title" >/dev/null
+}
+
+check_case examples/interop/argon2id-aes.kdbx Argon2id AES-256-CBC "Argon2id AES"
+check_case examples/interop/argon2d-chacha20.kdbx Argon2d ChaCha20 "ChaCha20"

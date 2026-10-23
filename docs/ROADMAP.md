@@ -40,13 +40,16 @@
 
 ## 现在在哪一步
 
-F1 到 F15 已完成，共 63 个测试用例，`moon check` 无警告。
+F1 到 F15 已完成，共 64 个测试用例，`moon check` 无警告。
 
 互操作进展：KeePassXC 2.7 新建的真实 KDBX 4.0 库已通过统一读取入口，完整走通
 头部验签、Argon2d、AES-256-CBC、gzip、XML 与受保护字段解密；KDBX 4.1 自建 fixture
 也覆盖同一全流程。`info`、`ls`、`show` 已在该真实库上验证，其中 `show` 默认脱敏，
 只有 `--reveal` 才显示明文。`audit` 已输出 Markdown/JSON 并支持
 `--fail-on-findings` 门禁；`export` 已支持 CSV/JSON 与文件输出。
+
+算法互操作又补了两份 pykeepass 生成的真实库：Argon2id + AES，以及 Argon2d +
+ChaCha20。真实 Argon2id 参数还抓出并修复了首轮地址块未初始化的问题。
 
 验收演示使用内置的 `examples/demo.kdbx`：
 
