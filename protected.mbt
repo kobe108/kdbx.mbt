@@ -99,7 +99,13 @@ fn unprotect_entry(
     }
     fields.push({ key: field.key(), value, is_encrypted: field.is_protected(), })
   }
-  { uuid: entry.uuid(), fields, }
+  {
+    uuid: entry.uuid(),
+    fields,
+    last_modified: entry.last_modified().unwrap_or(""),
+    expiry_time: entry.expiry_time().unwrap_or(""),
+    expires: entry.expires(),
+  }
 }
 
 ///|

@@ -7,7 +7,11 @@ pub fn banner() -> String
 // Errors
 
 // Types and methods
+type AuditFormat
+
 type CliCommand
+
+type ExportFormat
 
 // Type aliases
 

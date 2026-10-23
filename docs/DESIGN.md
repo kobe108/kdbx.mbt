@@ -50,6 +50,7 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
 - AES-256-CBC 解密、HMAC 块流校验与拼接、inner header 解析、gzip 解压。
 - XML 载荷解析为分组 / 条目模型（含 `Protected` 字段处理）。
 - CLI：`info`、`ls`、`show`。
+- 产品能力：`audit` 四类风险报告与 `export` CSV/JSON 脱敏导出。
 - 测试：规范向量、畸形输入、真实文件互操作。
 
 ### 3.1b 完整 KDBX 4.1 读取目标（必达）
@@ -68,9 +69,9 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
 
 ### 3.2 进阶（有余力再做，按优先级排序）
 
-1. `audit` 子命令：弱口令、重复使用、过期、长期未更换、缺少 TOTP 的报告，
-   输出 Markdown 或 JSON，便于接入 CI。
-2. `export` 子命令：CSV 或 JSON 导出，`--redact` 为默认，不输出明文口令。
+1. `audit` 子命令（已完成）：弱口令、重复使用、过期、长期未更换，
+   输出 Markdown 或 JSON，并可用 `--fail-on-findings` 接入 CI。
+2. `export` 子命令（已完成）：CSV 或 JSON 导出，默认脱敏，`--reveal` 才输出明文。
 3. KDBX 3.1 只读兼容（另一种格式，不在 4.1 完整读取目标内）。
 4. 写入路径：改写条目后重新加密保存（需要 XML 往返与头部哈希重算）。
 5. 与 CI 集成：把 `audit` 结果作为退出码或 SARIF 报告用于门禁。
@@ -91,7 +92,8 @@ KeePass 密码库，而不必把文件交给其他语言的工具链。
 - **数据层**：`block_stream.mbt`（HMAC 块流）、`aes*.mbt` / `cbc.mbt` /
   `chacha20.mbt`（外层密码）、`payload.mbt`（完整读取入口）。
 - **模型层**：`xml.mbt`、`vault.mbt`、`protected.mbt`（分组、条目与受保护字段）。
-- **产品层**：`audit.mbt`（体检规则）、`report.mbt`（报告渲染）、`export.mbt`（导出）。
+- **产品层**：`audit.mbt`（四类体检规则、Markdown/JSON 渲染）、
+  `export.mbt`（CSV/JSON 导出与脱敏）。
 - **入口**：`cmd/kdbx`（命令行工具），只做参数解析、文件 I/O 与打印；
   认证、解析和查询逻辑在库里，因此库行为可以被单元测试覆盖。
 
@@ -194,8 +196,8 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 | 1 | 10-14 到 10-16 | 密钥层 | 复合主密钥、AES-KDF、头部 SHA-256 与 HMAC 校验，含向量测试（SHA-256 与 HMAC-SHA-256 已完成） |
 | 2 | 10-17 到 10-19 | 解密路径 | AES-256-CBC、HMAC 块流、inner header、gzip 解压（已完成） |
 | 3 | 10-20 到 10-23 | 数据模型与 CLI | XML 转分组与条目模型，`info`、`ls`、`show`（已完成） |
-| 4 | 10-24 到 10-27 | 互操作与审计 | 真实 `.kdbx` 互操作（已完成），`audit` 报告（进行中） |
-| 5 | 10-28 到 10-31 | 收尾与提交 | 文档、演示、边界用例、提交材料（README、测试、许可证） |
+| 4 | 10-24 到 10-27 | 互操作与审计 | 真实 `.kdbx` 互操作、`audit` 报告（已完成） |
+| 5 | 10-28 到 10-31 | 收尾与提交 | 文档、一键演示、边界用例、提交材料（已完成） |
 
 ## 9. 风险与对策
 
@@ -216,7 +218,7 @@ Argon2id 为 `9E298B1956DB4773B23DFC3EC6F0A1E6`。
 | --- | --- |
 | 以 MoonBit 为主要实现语言 | 全部逻辑为 MoonBit，CLI 也是 MoonBit 可执行程序 |
 | 仓库公开、提交连续可追踪 | 常规 commit 与 PR 流程，CI 每次提交跑 check、test、fmt |
-| 能够运行 | `moon test` 全绿，`moon run cmd/kdbx` 可直接演示 |
-| 提供 README、示例与测试 | README 加本文档，分层测试覆盖规范向量、往返、畸形输入与互操作 |
+| 能够运行 | `moon test` 全绿；`scripts/demo.ps1` / `scripts/demo.sh` 一键演示 |
+| 提供 README、示例与测试 | README、设计文档、63 项分层测试与内置虚构演示库 |
 | 开源合规 | Apache-2.0；依赖逐项登记许可证；测试数据不违规分发 |
 | 可解释、AI 可用但责任在人 | 设计文档记录每个决策的规范依据，关键算法均有独立测试与出处 |

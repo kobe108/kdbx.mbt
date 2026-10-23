@@ -41,7 +41,9 @@
 | 互操作 | KeePassXC 2.7 新建库端到端打开（KDBX 4.0，Argon2d + AES + gzip） | 已完成 |
 | 互操作 | 4.0/4.1 块流布局与内层随机流派生规则 | 已完成 |
 | 产品层 | CLI：`info` / `ls` / `show`（默认脱敏，`--reveal` 显示受保护值） | 已完成 |
-| 产品层 | `audit` 体检与 `export` 导出 | 计划中 |
+| 产品层 | `audit`：弱口令、重复、过期、长期未更换，支持 Markdown/JSON 与 CI 门禁 | 已完成 |
+| 产品层 | `export`：CSV/JSON 全字段导出，默认脱敏，支持输出到文件 | 已完成 |
+| 验收 | 内置虚构演示库与跨平台一键演示脚本 | 已完成 |
 
 完整的分层设计、规范出处与到 10 月 31 日的里程碑见
 [docs/DESIGN.md](docs/DESIGN.md)。
@@ -73,9 +75,26 @@ moon run cmd/kdbx -- info path/to/database.kdbx
 moon run cmd/kdbx -- ls path/to/database.kdbx
 moon run cmd/kdbx -- show path/to/database.kdbx "entry title"
 moon run cmd/kdbx -- show path/to/database.kdbx "entry title" --reveal
+moon run cmd/kdbx -- audit path/to/database.kdbx
+moon run cmd/kdbx -- audit path/to/database.kdbx --format json --fail-on-findings
+moon run cmd/kdbx -- export path/to/database.kdbx --format json --output entries.json
 ```
 
-`show` 默认隐藏所有受保护字段；只有显式传入 `--reveal` 才输出明文。
+`show` 和 `export` 默认隐藏所有受保护字段；只有显式传入 `--reveal` 才输出明文。
+
+### 一键验收演示
+
+仓库内置只含虚构条目的 `examples/demo.kdbx`：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo.ps1
+```
+
+```sh
+sh scripts/demo.sh
+```
+
+脚本依次运行 `info`、四类风险审计、JSON CI 门禁和脱敏导出，不要求准备自己的密码库。
 
 ### 环境要求
 

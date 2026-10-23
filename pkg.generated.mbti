@@ -12,6 +12,8 @@ pub fn argon2_from_parameters(VariantDict, Argon2Kind) -> Argon2Kdf raise KdbxEr
 
 pub fn argon2i_kind() -> Argon2Kind
 
+pub fn audit_vault(Vault, Int64, Int) -> AuditReport
+
 pub fn banner() -> String
 
 pub fn blake2b(Bytes, Int) -> Bytes raise KdbxError
@@ -43,6 +45,10 @@ pub fn derive_header_hmac_key(Bytes) -> Bytes raise KdbxError
 pub fn derive_hmac_key_base(Bytes, Bytes) -> Bytes raise KdbxError
 
 pub fn encode_variant_dict(VariantDict) -> Bytes
+
+pub fn export_csv(Vault, Bool) -> String
+
+pub fn export_json(Vault, Bool) -> String
 
 pub let field_compression : UInt
 
@@ -81,6 +87,8 @@ pub fn kdf_name(VariantDict) -> String
 pub fn open_database(Bytes, MasterKey) -> (InnerHeader, Bytes) raise KdbxError
 
 pub fn open_header(Bytes, MasterKey) -> OpenedHeader raise KdbxError
+
+pub fn parse_iso_date_days(String) -> Int64?
 
 pub fn parse_outer_header(Bytes) -> OuterHeader raise KdbxError
 
@@ -163,6 +171,40 @@ pub struct Argon2Params {
   version : UInt
   kind : Argon2Kind
 }
+
+pub struct AuditEntry {
+  path : String
+  uuid : String
+  title : String
+  issues : Array[AuditIssue]
+}
+pub fn AuditEntry::issues(Self) -> Array[AuditIssue]
+pub fn AuditEntry::path(Self) -> String
+pub fn AuditEntry::title(Self) -> String
+pub fn AuditEntry::uuid(Self) -> String
+
+pub enum AuditIssue {
+  WeakPassword(String)
+  ReusedPassword(Int)
+  Expired(String)
+  Stale(Int)
+}
+pub fn AuditIssue::code(Self) -> String
+pub fn AuditIssue::message(Self) -> String
+
+pub struct AuditReport {
+  entries_scanned : Int
+  stale_days : Int
+  findings : Array[AuditEntry]
+}
+pub fn AuditReport::count(Self, String) -> Int
+pub fn AuditReport::entries_scanned(Self) -> Int
+pub fn AuditReport::findings(Self) -> Array[AuditEntry]
+pub fn AuditReport::has_findings(Self) -> Bool
+pub fn AuditReport::issue_count(Self) -> Int
+pub fn AuditReport::render_json(Self) -> String
+pub fn AuditReport::render_markdown(Self) -> String
+pub fn AuditReport::stale_days(Self) -> Int
 
 pub struct ByteReader {
   data : Bytes
@@ -353,9 +395,15 @@ pub fn Vault::groups(Self) -> Array[VaultGroup]
 pub struct VaultEntry {
   uuid : String
   fields : Array[VaultField]
+  last_modified : String
+  expiry_time : String
+  expires : Bool
 }
+pub fn VaultEntry::expires(Self) -> Bool
+pub fn VaultEntry::expiry_time(Self) -> String?
 pub fn VaultEntry::field(Self, String) -> String?
 pub fn VaultEntry::fields(Self) -> Array[VaultField]
+pub fn VaultEntry::last_modified(Self) -> String?
 pub fn VaultEntry::uuid(Self) -> String
 
 pub struct VaultField {

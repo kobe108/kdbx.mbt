@@ -35,6 +35,9 @@ jobs:
       - name: Run tests
         run: moon test
 
+      - name: Run acceptance demo
+        run: sh scripts/demo.sh
+
       - name: Keep generated interfaces in sync
         continue-on-error: true
         run: |

@@ -33,6 +33,9 @@ pub fn VaultField::is_protected(self : VaultField) -> Bool {
 pub struct VaultEntry {
   uuid : String
   fields : Array[VaultField]
+  last_modified : String
+  expiry_time : String
+  expires : Bool
 }
 
 ///|
@@ -43,6 +46,32 @@ pub fn VaultEntry::uuid(self : VaultEntry) -> String {
 ///|
 pub fn VaultEntry::fields(self : VaultEntry) -> Array[VaultField] {
   self.fields.copy()
+}
+
+///|
+/// KeePass timestamp of the last modification, when present.
+pub fn VaultEntry::last_modified(self : VaultEntry) -> String? {
+  if self.last_modified == "" {
+    None
+  } else {
+    Some(self.last_modified)
+  }
+}
+
+///|
+/// KeePass expiry timestamp, meaningful only when `expires` is true.
+pub fn VaultEntry::expiry_time(self : VaultEntry) -> String? {
+  if self.expiry_time == "" {
+    None
+  } else {
+    Some(self.expiry_time)
+  }
+}
+
+///|
+/// Whether KeePass considers this entry expired after its expiry timestamp.
+pub fn VaultEntry::expires(self : VaultEntry) -> Bool {
+  self.expires
 }
 
 ///|
@@ -250,5 +279,20 @@ fn parse_entry(element : XmlElement) -> VaultEntry {
       is_encrypted,
     })
   }
-  { uuid: element.child_text("UUID"), fields, }
+  let (last_modified, expiry_time, expires) = match element.child("Times") {
+    Some(times) =>
+      (
+        times.child_text("LastModificationTime"),
+        times.child_text("ExpiryTime"),
+        times.child_text("Expires").to_lower() == "true",
+      )
+    None => ("", "", false)
+  }
+  {
+    uuid: element.child_text("UUID"),
+    fields,
+    last_modified,
+    expiry_time,
+    expires,
+  }
 }

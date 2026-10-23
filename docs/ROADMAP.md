@@ -34,19 +34,26 @@
 | F10c | 内层随机流（Salsa20） | 独立向量通过；真实 KeePassXC 4.0 库可解密受保护字段 | 已完成 |
 | F11 | XML 载荷解析为条目模型 | 分组树、条目、字段与保护标志解析正确；畸形文档被拒 | 已完成 |
 | F12 | CLI：`info` / `ls` / `show` | 三个子命令在真实文件上输出正确信息；默认脱敏；错误文件给出清晰提示与退出码 | 已完成 |
-| F13 | `audit` 体检报告 | 弱口令、重复使用、过期、长期未更换四类规则各有正反用例；输出 Markdown 与 JSON | 待做 |
-| F14 | `export` 导出 | CSV 与 JSON 导出字段完整；默认不输出明文口令 | 待做 |
-| F15 | 演示与提交材料 | README 与设计文档齐全；一条命令可复现演示；依赖许可证登记完整 | 待做 |
+| F13 | `audit` 体检报告 | 弱口令、重复使用、过期、长期未更换四类规则各有正反用例；输出 Markdown 与 JSON | 已完成 |
+| F14 | `export` 导出 | CSV 与 JSON 导出字段完整；默认不输出明文口令 | 已完成 |
+| F15 | 演示与提交材料 | README 与设计文档齐全；一条命令可复现演示；依赖许可证登记完整 | 已完成 |
 
 ## 现在在哪一步
 
-F1 到 F12（含 F9b、F10b、F10c）与 F7c（Argon2d/Argon2id）已完成，
-共 58 个测试用例，`moon check` 无警告。
+F1 到 F15 已完成，共 63 个测试用例，`moon check` 无警告。
 
 互操作进展：KeePassXC 2.7 新建的真实 KDBX 4.0 库已通过统一读取入口，完整走通
 头部验签、Argon2d、AES-256-CBC、gzip、XML 与受保护字段解密；KDBX 4.1 自建 fixture
 也覆盖同一全流程。`info`、`ls`、`show` 已在该真实库上验证，其中 `show` 默认脱敏，
-只有 `--reveal` 才显示明文。下一个功能是 **F13 `audit` 体检报告**。
+只有 `--reveal` 才显示明文。`audit` 已输出 Markdown/JSON 并支持
+`--fail-on-findings` 门禁；`export` 已支持 CSV/JSON 与文件输出。
+
+验收演示使用内置的 `examples/demo.kdbx`：
+
+- Windows：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo.ps1`
+- Unix：`sh scripts/demo.sh`
+
+脚本覆盖 `info`、四类审计、退出码门禁和脱敏导出，CI 每次推送都会执行。
 
 `Protected` 字段的随机流是**共享**且按文档顺序推进的；解密后仍保留敏感标记，
 因此展示层既能得到明文，也能安全地默认脱敏。
